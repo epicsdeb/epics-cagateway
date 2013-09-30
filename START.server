@@ -1,0 +1,36 @@
+
+
+# Clients using gateway as CA concentrator with local loopback driver.
+# Set these variable where clients are run:
+# export EPICS_CA_ADDR_LIST=127.0.0.1 
+# export EPICS_CA_AUTO_ADDR_LIST=NO
+#
+# iocpvgateway: -cip 164.54.2.108 - test with PV pvgateway:memuse
+
+# Clients esing the gateway that is running at the APS (on the 188 network):
+# export EPICS_CA_ADDR_LIST=164.54.189.255
+
+# Other important variables to remember (gateway sets these)
+# export EPICS_CAS_INTF_ADDR= - IP address where server listens
+# export EPICS_CAS_SERVER_PORT= - port that the CA server uses
+# export EPICS_CA_SERVER_PORT= - port that the CA client library uses
+
+# Start using a pv list and alias file
+# ./gateway -pv ../PV_LIST -alias ../PV_ALIAS $*
+
+# Start on chiron using the 2 network as client, the 188 as server
+# ./gateway -sip 164.54.188.29 -cip 164.54.3.255
+
+# Start as a CA concentrator
+# ./gateway -sip 127.0.0.1 -cip 164.54.3.255
+
+# Start on an alternate port
+# ./gateway -cport 9990 -sport 9990 $*
+
+./gateway $*
+
+# test the gateway in here:
+#  cd /home/helios2/srsys/op/adl  <--- major adl file directory.
+#  medm -x sMain.adl <--- main APS adl file
+
+# test PV for waveform = SRI:S35DCCT:currentCP

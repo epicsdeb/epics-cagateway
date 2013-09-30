@@ -1,0 +1,111 @@
+
+Wed Feb 18 09:10:14 CST 1998
+
+	Upon USR1 signal gateway now executes commands specified in a
+	gateway.command file. 
+	Incorporated latest changes to access security in gateAsCa.cc
+
+Tue Apr 21 22:38:59 CDT 1998
+	Real name is now used for access security pattern matching.
+	Fixed PV Pattern Report 
+	New gdd api changes
+
+Tue Dec 22 12:53:15 CST 1998
+        Tagged current CVS version as Gateway0_1 before commit.
+        Current version has ENUM hack changes.
+        Fixed bug with removing items from pv_con_list.
+        Core dumps, but infrequently.
+        Has been in production use for several weeks.
+        Will be tagged Gateway0_2 after commit.
+
+Tue Dec 22 13:15:08 CST 1998
+        This version has much debugging printout (inside #if's).
+        Changed gateVc::remove -> vcRemove and add -> vcAdd.
+          Eliminates warnings about hiding private ancestor functions on Unix.
+          (Warning is invalid.)
+        Now compiles with no warnings for COMPILR=STRICT on Solaris.
+        Made changes to speed it up:
+          Put #if around ca_add_fd_registration.
+            Also eliminates calls to ca_pend in fdCB.
+          Put #if DEBUG_PEND around calls to checkEvent, which calls ca_pend.
+          Changed mainLoop to call fdManager::process with delay=0.
+          Put explicit ca_poll in the mainLoop.
+          All these changes eliminate calls to poll() which was predominant
+            time user.  Speed up under load is as much as a factor of 5. Under
+            no load it runs continuously, however, rather than sleeping in
+            poll().
+        Added #if NODEBUG around calls to Gateway debug routines (for speed).
+        Changed ca_pend(GATE_REALLY_SMALL) to ca_poll for aesthetic reasons.
+        Added timeStamp routine to gateServer.cc.
+        Added line with PID and time stamp to log file on startup.
+        Changed freopen for stderr to use "a" so it doesn't overwrite the log.
+        Incorporated Ralph Lange changes by hand.
+          Changed clock_gettime to osiTime to avoid unresolved reference.
+          Fixed his gateAs::readPvList to eliminate core dump.
+          Made other minor fixes.
+        Did minor cleanup as noticed problems.
+        This version appears to work but has debugging (mostly turned off).
+        Will be tagged Gateway0_3 after commit.
+
+
+
+------------------------------------------------------------------
+
+Wed Feb 28 10:02:45 CST 2007   Gateway2-0-0-1
+	Fixed return code for gddAppType acks.
+
+Tue May 22 15:11:09 CDT 2007   Gateway2-0-0-2
+	Removed pre R3.14 Makefiles.
+
+Tue Jul 10 14:54:49 CDT 2007   Gateway2-0-1-0 = Gateway2-0-0-3  
+        Changes from Dirk Zimoch
+
+	The two main changes in behavior ("don't use cached values in caget"
+	and "create separate archive monitor for archivers") are controlled by
+	command line switches: -no_cache and -archive.
+
+	The option to use "DENY FROM" in the configuration is chosen by a 
+	compiler switch in the Makefile.
+
+	Other changes fix bugs (enable behavior that matches the documentation 
+	or the expectation) without any switch:
+	- events are now forwared to alarm handler clients only when STAT or 
+	  SEVR changes
+	- bugfix: beacons were not sent to clients when -cip option was used.
+	- bugfix: enums appeared frozen and analog values were rounded when 
+	  alarm handler client is connected
+	- bugfix: gateway hung (using 100% CPU time) then arrays > 
+	  EPICS_CA_MAX_ARRAY_BYTES were read.
+
+Wed Aug  1 09:20:30 CDT 2007   Gateway2-0-2-0
+	New option to use Perl regexp instead of GNU regexp, controlled with a
+	compiler switch defined in the Makefile.  - Dirk Zimoch
+
+        New options to use DENY FROM and negated regular expressions to prevent
+	loops in reverse gateways while allowing access to the internal PVs.
+        These require USE_NEG_REGEXP=YES and USE_DENY_FROM=YES in Makefile. -
+	Dirk Zimoch
+
+        Added docs subdirectory containing all Gateway docs.
+
+Thu Aug  2 16:32:10 CDT 2007   Gateway2-0-2-1
+	Bug fix to the conditional compilation for the "negated regexp" feature.
+        - Dirk Zimoch
+
+Mon Jan 14 09:25:27 CST 2008   Gateway2-0-3-0
+	Restored gateway default behavior. Now if "-archive" is not used gateway 
+	will post log events along with value change events. - Gasper Jansa
+
+Tue Aug  4 10:43:32 MDT 2009
+	I updated the PCAS/casdef.h to add a new backwards compatiible virtual 
+	writeNotify interface in casChannel and casPV. This is important
+	for the GW so that it can execute the proper form of ca_put or
+	ca_put_callback in its implementation of write, or writeNotify,
+	and so I did also install the necessary changes in the GW so that 
+	it will benefit from the new writeNotify interface. - Jeff Hill
+
+Wed Aug 26 09:45:19 CDT 2009
+        Added a build optional heartbeat pv, <suffix>:heartbeat, with val 0.
+
+Thu Sep 17 10:22:51 CDT 2009   Gateway2-0-4-0
+	Modified release number and tagged files.

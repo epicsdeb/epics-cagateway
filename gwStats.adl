@@ -1,0 +1,495 @@
+
+file {
+	name="/tmp_mnt/net/csr/csr-home/lange/work/epics/Gateway/extensions/src/gateway/gwStats.adl"
+	version=020410
+}
+display {
+	object {
+		x=420
+		y=152
+		width=381
+		height=391
+	}
+	clr=14
+	bclr=30
+	cmap=""
+}
+"color map" {
+	ncolors=65
+	colors {
+		ffffff,
+		ececec,
+		dadada,
+		c8c8c8,
+		bbbbbb,
+		aeaeae,
+		9e9e9e,
+		919191,
+		858585,
+		787878,
+		696969,
+		5a5a5a,
+		464646,
+		2d2d2d,
+		000000,
+		00d800,
+		1ebb00,
+		339900,
+		2d7f00,
+		216c00,
+		fd0000,
+		de1309,
+		be190b,
+		a01207,
+		820400,
+		5893ff,
+		597ee1,
+		4b6ec7,
+		3a5eab,
+		27548d,
+		fbf34a,
+		f9da3c,
+		eeb62b,
+		e19015,
+		cd6100,
+		ffb0ff,
+		d67fe2,
+		ae4ebc,
+		8b1a96,
+		610a75,
+		a4aaff,
+		8793e2,
+		6a73c1,
+		4d52a4,
+		343386,
+		c7bb6d,
+		b79d5c,
+		a47e3c,
+		7d5627,
+		58340f,
+		99ffff,
+		73dfff,
+		4ea5f9,
+		2a63e4,
+		0a00b8,
+		ebf1b5,
+		d4db9d,
+		bbc187,
+		a6a462,
+		8b8239,
+		73ff6b,
+		52da3b,
+		3cb420,
+		289315,
+		1a7309,
+	}
+}
+text {
+	object {
+		x=40
+		y=11
+		width=301
+		height=40
+	}
+	"basic attribute" {
+		clr=10
+	}
+	textix="Gateway $(PREFIX)"
+	align="horiz. centered"
+}
+composite {
+	object {
+		x=42
+		y=85
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=85
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).alive"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=85
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Alive:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=115
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=115
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).vctotal"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=115
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Total VCs:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=145
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=145
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).pvtotal"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=145
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Total PVs:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=175
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=175
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).fd"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=175
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="FDs:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=205
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=205
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).clientEventRate"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=205
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Client Event Rate:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=265
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=265
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).existTestRate"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=265
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Exist Test Rate:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=295
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=295
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).loopRate"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=295
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Loop Rate:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=55
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=55
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).active"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=55
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Active:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=325
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=325
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).serverEventRate"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=325
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Server Event Rate:"
+		}
+	}
+}
+composite {
+	object {
+		x=42
+		y=355
+		width=296
+		height=20
+	}
+	vis="static"
+	children {
+		"text update" {
+			object {
+				x=233
+				y=355
+				width=105
+				height=20
+			}
+			monitor {
+				chan="$(PREFIX).serverPostRate"
+				clr=14
+				bclr=0
+			}
+			align="horiz. centered"
+		}
+		text {
+			object {
+				x=42
+				y=355
+				width=172
+				height=20
+			}
+			"basic attribute" {
+				clr=10
+			}
+			textix="Server Post Rate:"
+		}
+	}
+}
+"text update" {
+	object {
+		x=233
+		y=235
+		width=105
+		height=20
+	}
+	monitor {
+		chan="$(PREFIX).postEventRate"
+		clr=14
+		bclr=0
+	}
+	align="horiz. centered"
+}
+text {
+	object {
+		x=42
+		y=235
+		width=172
+		height=20
+	}
+	"basic attribute" {
+		clr=10
+	}
+	textix="Client Post Rate:"
+}

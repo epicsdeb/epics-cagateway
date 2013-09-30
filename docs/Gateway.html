@@ -1,0 +1,1264 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Gateway Users Guide</title>
+</head>
+
+<body bgcolor="White" lang="en">
+<img alt="EPICS Logo" src="epics.png">
+
+<h1 style="text-align: center">Gateway Users Guide</h1>
+<br>
+<br>
+
+
+<h2 style="text-align: center">Kenneth Evans, Jr.</h2>
+
+<h2 style="text-align: center">September 2005</h2>
+
+<h3 style="text-align: center">Updated July 2007, Dirk Zimoch</h2>
+<br>
+
+
+<center>
+Advanced Photon Source<br>
+Argonne National Laboratory<br>
+9700 South Cass Avenue<br>
+Argonne, IL 60439<br>
+</center>
+<br>
+<br>
+
+
+<h2>Table of Contents</h2>
+<ul>
+  <li><a href="#Introduction">Introduction</a>
+    <ul>
+      <li><a href="#Overview">Overview</a></li>
+      <li><a href="#History">History</a></li>
+    </ul>
+  </li>
+  <li><a href="#Starting">Starting the Gateway</a></li>
+  <li><a href="#Using">Using the Gateway</a></li>
+  <li><a href="#ErrorMessages">Error messages</a></li>
+  <li><a href="#Building">Building the Gateway</a></li>
+  <li><a href="#AccessSecurity">Access Security</a></li>
+  <li><a href="#Report">Reports</a></li>
+  <li><a href="#ServerMode">Server Mode</a></li>
+  <li><a href="#ProcessVariables">Gateway Process Variables</a></li>
+  <li><a href="#AlarmHandler">Alarm Handler</a></li>
+  <li><a href="#PutLogging">Put Logging</a></li>
+  <li><a href="#BeaconAnomalies">Beacon Anomalies and Search Requests</a></li>
+  <li><a href="#GUIInterface">GUI Interface</a></li>
+  <li><a href="#Gateway">Gateway Configurations</a>
+    <ul>
+      <li><a href="#SymmetricGateways">Symmetric Gateways</a></li>
+      <li><a href="#ReverseGateway">Reverse Gateway</a></li>
+      <li><a href="#AliasGateway">Alias Gateway</a></li>
+    </ul>
+  </li>
+  <li><a href="#ChannelAccess">Channel Access</a></li>
+  <li><a href="#Acknowledgements">Acknowledgements</a></li>
+  <li><a href="#Copyright">Copyright</a></li>
+</ul>
+
+<h2><a name="Introduction">Introduction</a></h2>
+
+<h3><a name="Overview">Overview</a></h3>
+
+<p>The Gateway is both a <a href="#ChannelAccess">Channel Access Server</a>
+and <a href="#ChannelAccess">Channel Access Client</a> that provides a means
+for many clients to access a process variable while making only one
+connection to the server that owns the process variable. It also provides
+additional access security beyond that on the server. It thus protects
+critical servers while providing possibly restricted access to needed process
+variables. The Gateway typically runs on a machine with multiple network
+cards, and the clients and the server may be on different subnets.</p>
+
+<p>Previous versions of the Gateway worked with EPICS 3.13 but required a
+special version of base to build and work correctly. The required changes
+were never incorporated into EPICS base. The latest of these versions is
+Gateway 1.3. The new version, starting as Gateway 2.0, only works well with
+EPICS 3.14.6 or later and does not otherwise require a special EPICS base. It
+also has additional features compared to Gateway 1.3. Note that even if you
+are using EPICS 3.13 for your other applications, you can still use Gateway
+2.x built with EPICS 3.14 as your Gateway.</p>
+
+<p>For this guide we will often refer to the clients as <a
+href="http://www.aps.anl.gov/epics/extensions/medm/index.php">MEDM</a> and
+the server as an IOC. This is (1) to avoid confusion with the client and
+server parts of the Gateway and (2) because MEDM and IOCs are the most
+typical and most used client and servers and most people are familiar with
+them. Keep in mind, however, that there are many other clients than MEDM and
+there are other types of servers than an IOC. The Gateway is, in fact,
+another type of server.</p>
+
+<p>The following is a diagram of several MEDMs connected through the Gateway
+to a process variable in an IOC. Without the Gateway there would be a
+connection from each MEDM to the IOC. This uses up extra resources in the IOC
+and causes additional traffic.</p>
+
+<p align="center"><img alt="Gateway Connections"
+src="Gateway.Connections.gif"></p>
+
+<p>In addition, these MEDMs can be restricted in their access to the process
+variable. A typical scenario is to allow only read access. Note that the
+MEDMs see the Gateway as just another server, and the IOCs see the Gateway as
+just another client. The IOCs could be on a different subnet from the MEDMs,
+and in fact, the IOCs might not even be visible to the MEDMs without the
+Gateway. In the case where the IOCs and the MEDMs are on different subnets,
+the Gateway would be on a machine that has two network interface cards, one
+to the MEDM subnet and one to the IOC subnet.</p>
+
+<p>At the APS the main Gateway is for people in the office building to
+connect to the machine network with read access only. There can be many users
+connected to popular process variables, such as the one for the beam current.
+There is only the one Gateway connection, however, to the IOC with that
+process variable. It is little affected by all these users and can go about
+its primary responsibility of helping keep the accelerator running. This
+Gateway typically has connections to on the order of 10,000-30,000 process
+variables in on the order of 300 IOCs. In addition the APS has one Gateway
+for each experimental team. These teams have read access to machine process
+variables and read/write access to their own process variables. There are on
+the order of 60 Gateways running at the APS.</p>
+
+<p>In addition to connections to process variables in IOCs and other servers,
+the Gateway, as a server, provides its own <a
+href="#ProcessVariables">internal process variables</a>. These are used for
+diagnostic purposes, to initiate reports, and to control the Gateway.</p>
+
+<p>Internally the Gateway maintains two objects for each process variable.
+There is a PV (Process Variable) object that handles the Gateway client
+connections to the IOC, and there is a VC (Virtual Connection) object that
+handles the Gateway server connections. Each VC has a list of Chan (Channel)
+connections to the MEDMs. The PV object implements the client side of the
+Gateway, and the VC object and its Chans implement the server side. The
+following picture shows three typical states for these objects.</p>
+
+<p align="center"><img alt="Gateway Internals"
+src="Gateway.Internals.gif"></p>
+
+<p>In the top state there is no connection to the IOC, either because it is
+still trying to connect or because the connection has been lost. In that case
+there is no VC, and the MEDMs see the process variable as not existing. In
+this case the PV object is destroyed after two minutes unless it connects.
+The middle state is most typical. There is a connection to the IOC, and each
+MEDM is connected through the VC. In the lower state the PV is connected to
+the IOC, but there are no MEDMs interested in the process variable. The PV
+object and connection to the IOC are maintained for two hours after the last
+time they are used in case another MEDM or other client wants to use it
+again. The other client could be a command-line program like caget, that
+requests the value and then exits. In that case the PV object will still stay
+around for at least two hours.</p>
+
+<p>When a Channel Access Client wants to connect to a process variable, it
+send out a series of search requests, which are UDP packets, on the network.
+These packets are initially sent at a very fast rate with the time between
+them doubling at each try until 100 are sent or there is an affirmative
+reply. Each server that gets such a packet is required to determine if it has
+the process variable. When the Gateway gets such a request, it creates an
+unconnected PV object that itself sends a search request to the IOCs. This PV
+starts out as<strong> Connecting</strong>, and the Gateway responds to the
+search request as postponed. If it does not connect in a very short time, it
+becomes <strong>Dead</strong> and the Gateway responds to subsequent search
+requests as not having it. If it is not found by the Gateway after two
+minutes, the PV is destroyed. If it becomes connected to an IOC, its new
+state depends on its old state. If it was <strong>Disconnected</strong> or
+<strong>Dead</strong>, then it becomes <strong>Inactive</strong> and the next
+<strong>Exist Test</strong> will return that it was found. If it was
+<strong>Connecting</strong>, postponed <strong>Exist Tests</strong> are
+processed, and if a VC is created because an MEDM is still interested, it
+becomes <strong>Active</strong>. Soon afterward a Chan is created, and the
+MEDM is connected to the VC and through it to the PV. Once the PV is
+<strong>Active</strong> or <strong>Inactive</strong>, the Gateway responds to
+subsequent search requests as having the process variable. If the connection
+is then lost, the VC and its Chans are destroyed, and the PV becomes
+<strong>Disconnected</strong>.</p>
+
+<p><a href="#ProcessVariables">Internal process variables</a> in the Gateway
+give the number of PVs in each state, and can be used to monitor its
+behavior. In order to interpret the results, it is necessary to have an
+understanding of these states.</p>
+
+<p>PVs are either <strong>Connected</strong> or <strong>Unconnected</strong>.
+<strong>Connected</strong> consists of either <strong>Active</strong> or
+<strong>Inactive</strong>. <strong>Unconnected</strong> consists of
+<strong>Connecting</strong>, <strong>Dead</strong>, or
+<strong>Disconnected</strong>. The top state in the picture above is
+<strong>Unconnected,</strong> but it is not clear whether it is
+<strong>Connecting</strong>, <strong>Dead</strong>, or
+<strong>Disconnected</strong>. The middle state is <strong>Connected
+</strong>and<strong> Active</strong>. The bottom state is
+<strong>Connected</strong> and <strong>Inactive</strong>.</p>
+<ul>
+  <li>total = connected + unconnected</li>
+  <li>connected = active + inactive</li>
+  <li>unconnected = connecting + dead + disconnected</li>
+</ul>
+
+<p>Saying this another way: the PVs for which the Gateway has an established
+client connection with an IOC are<strong> Connected</strong>. Otherwise they
+are <strong>Unconnected</strong>. For the <strong>Connected</strong> ones, if
+there is a connection to an MEDM, then they are<strong> Active</strong>.
+Otherwise they are <strong>Inactive</strong>. If they are
+<strong>Unconnected</strong>, it may because they are
+<strong>Disconnected</strong> (meaning formerly connected),
+<strong>Connecting</strong>, or <strong>Dead</strong>.</p>
+
+<p></p>
+
+<p align="center"><img alt="Gateway PV States" src="GatewayPvStates.gif"></p>
+
+<p>The Gateway handles most of the information about a process variable that
+would be needed by most Channel Access Clients, in particular MEDM. An
+exception is the RTYP field for records in an IOC. <a
+href="http://www.aps.anl.gov/asd/controls/epics/EpicsDocumentation/ExtensionsManuals/MEDM/MEDM.html#PVInfoDialogBox">PvInfo
+in MEDM</a> shows this field if directly connected to an IOC, but just shows
+Not Available if through the Gateway. The field is the record type of the
+process variable and is little used. It has not been deemed reasonable to add
+the overhead to the Gateway to make it available. See the discussion under <a
+href="#AlarmHandler">Alarm Handler</a> for more technical information on this
+issue.</p>
+
+<p>For information on obtaining the Gateway, consult the <a
+href="http://www.aps.anl.gov/epics/index.php">EPICS Documentation</a>.</p>
+
+<h3><a name="History">History</a></h3>
+
+<p>The Gateway was originally written by Jim Kowalkowski of the APS starting
+in early 1996. Its basic concept and structure owes to him, but it was never
+really finished and did not work well or reliably. Janet Anderson did some
+work on it after Jim left the APS. Kenneth Evans took it over in 1999, and
+made it work in a usable fashion. This required making several changes to
+EPICS base, however. These changes were never officially incorporated into
+EPICS base, and it hence required a special version of base to build the
+Gateway. Ralph Lange of BESSY also worked on the earlier version and took the
+Gateway over in 2001, adding regular expressions to the process variable
+specifications and making it work with the Alarm Handler. Kenneth Evans
+converted it to EPICS 3.14 in mid-2002, working with Jeff Hill of LANL, the
+person in charge of <a href="#ChannelAccess">Channel Access</a>. New
+features, including many more internal process variables were added, and it
+was made to run on Linux and WIN32. There were problems with the early 3.14
+versions of Channel Access, and these were slowly resolved over the period
+from then until late summer 2003. It now works acceptably with EPICS 3.14.6
+or later, uses the standard version of base, uses appreciably less CPU than
+Gateway 1.3, and has a number of new features as well as some bug fixes.
+In 2007, some bugfixes and new features have been applied by Gasper Jansa
+(cosylab) and Dirk Zimoch (PSI). Due to some alarm handler related bugs in
+older versions of EPICS base, it is recommended to use EPICS 3.14.9 or
+later.
+</p>
+
+<h2><a name="Starting">Starting the Gateway</a></h2>
+
+<p>The Gateway is started by typing the following on a command line:</p>
+<pre>gateway [Options]</pre>
+
+<p>The options are:</p>
+
+<table border="1">
+  <tbody>
+    <tr>
+      <td>-debug &lt;value&gt;</td>
+      <td>Enter a value between 0-100. 50 gives lots of information, 1 gives
+        a small amount. For developers.</td>
+    </tr>
+    <tr>
+      <td>-pvlist &lt;filename&gt;</td>
+      <td>Name of the file with all the allowed PVs in it. There is a sample
+        file, gateway.pvlist, in the source distribution and reproduced <a
+        href="GATEWAY.pvlist">here</a>. The version in the distribution may
+        be more recent. See <a href="#AccessSecurity">Access Security</a> for
+        more information.</td>
+    </tr>
+    <tr>
+      <td>-access &lt;filename&gt;</td>
+      <td>Name of the file with all the EPICS access security rules in it.
+        The syntax for this file is the same as that for EPICS access
+        security. See the <a href="#ChannelAccess">Application Developers
+        Guide</a> for more information on this syntax and EPICS access
+        security in general, and see <a href="#AccessSecurity">Access
+        Security</a> below for more information. There is a sample file,
+        gateway.access, in the source distribution and reproduced <a
+        href="GATEWAY.access">here</a>. The version in the distribution may
+        be more recent.</td>
+    </tr>
+    <tr>
+      <td>-log &lt;filename&gt;</td>
+      <td><p>Name of file where all messages from the Gateway go, including
+        stderr and stdout. This file will be automatically renamed if the
+        Gateway is in server mode and it restarts.</p>
+      </td>
+    </tr>
+    <tr>
+      <td>-command &lt;filename&gt;</td>
+      <td>Name of the file where your customized Gateway command file goes.
+        The specified commands in this file are executed when a USR1 signal
+        is sent to the Gateway or the <a href="#ProcessVariables">internal
+        process variable</a>, gateway:commandFlag, is set to 1. Lines in the
+        command file may be R1, R2, R3, or AS to run reports 1-3 and reread
+        the access security file, respectively. See <a
+        href="#Report">Reports</a> below for more information. There is a
+        sample file, gateway.command, in the source distribution and
+        reproduced <a href="GATEWAY.command">here</a>. The version in the
+        distribution may be more recent</td>
+    </tr>
+    <tr>
+      <td>-putlog &lt;filename&gt;</td>
+      <td>Name of the file where Gateway put logging goes. Put logging is
+        specified with TRAPWRITE in the access file. See the <a
+        href="#ChannelAccess">Application Developers Guide</a> under access
+        security as well as <a href="#AccessSecurity">Access Security</a> and
+        <a href="#PutLogging">Put Logging</a> below for more information.
+        This file will be automatically renamed if the Gateway is in server
+        mode and it restarts.</td>
+    </tr>
+    <tr>
+      <td>-report &lt;filename&gt;</td>
+      <td>Name of the file where <a href="#Report">reports</a> go. The
+        reports are appended if the file exists when the reports are
+        generated. If not specified, the name is
+        <strong>gateway:report</strong>.</td>
+    </tr>
+    <tr>
+      <td>-home &lt;directory&gt;</td>
+      <td>Directory where the Gateway looks for its input files and writes
+        its output files. Setting this is equivalent to changing to that
+        directory before starting the Gateway. Setting the environment
+        variable GATEWAY_HOME also accomplishes the same result.</td>
+    </tr>
+    <tr>
+      <td>-sip &lt;ip-address&gt;</td>
+      <td>IP address where the Gateway server listens for process variable
+        requests. Sets the environment variable EPICS_CAS_INTF_ADDR.</td>
+    </tr>
+    <tr>
+      <td>-signore &lt;ip-address-list&gt;</td>
+      <td>List of IP address that the Gateway server ignores. Sets the
+        environment variable EPICS_CAS_IGNORE_ADDR_LIST.</td>
+    </tr>
+    <tr>
+      <td>-cip &lt;ip-address-list&gt;</td>
+      <td>List of IP addresses that the Gateway client uses to find the real
+        process variables. See the <a href="#ChannelAccess">Channel Access
+        Reference Manual</a> for more information. Sets the environment
+        variables EPICS_CA_AUTO_LIST=NO and EPICS_CA_ADDR_LIST.</td>
+    </tr>
+    <tr>
+      <td>-sport &lt;port&gt;</td>
+      <td>The port which the Gateway server uses to listen for process
+        variable requests. The default is 5064. Sets the environment variable
+        EPICS_CAS_SERVER_PORT.</td>
+    </tr>
+    <tr>
+      <td>-cport &lt;port&gt;</td>
+      <td>The port which the Gateway client uses to find the real process
+        variables. Sets the environment variable EPICS_CA_SERVER_PORT. Be
+        aware that if you specify -cport and do not specify -sport, then the
+        server port will also be the same as what you specify for -cport.
+        This is a Channel Access feature. To avoid it, specify -sport.</td>
+    </tr>
+    <tr>
+      <td>-connect_timeout &lt;sec&gt;</td>
+      <td>The amount of time in seconds that the Gateway will allow a process
+        variable search to continue before marking the process variable as
+        being <strong>Dead</strong>. The default is 1.</td>
+    </tr>
+    <tr>
+      <td>-inactive_timeout &lt;sec&gt;</td>
+      <td>The amount of time in seconds that the Gateway will hold the real
+        connection to an <strong>Inactive</strong> process variable. The
+        default is 7200 (2 hours).</td>
+    </tr>
+    <tr>
+      <td>-dead_timeout &lt;sec&gt;</td>
+      <td>The amount of time in seconds that the Gateway will continue to
+        look for process variables that are <strong>Connecting</strong> to
+        the IOCs that the Gateway is using. The default is 120 (2 min).</td>
+    </tr>
+    <tr>
+      <td>-disconnect_timeout &lt;sec&gt;</td>
+      <td>The amount of time in seconds that the Gateway will hold
+        <strong>Disconnected</strong> process variables (those that were
+        connected but have been disconnected).  The default is 7200 (2
+      hours).</td>
+    </tr>
+    <tr>
+      <td>-reconnect_inhibit &lt;sec&gt;</td>
+      <td>The minimum amount of time in seconds after the last beacon anomaly
+        sequence before generating a new one. The Gateway generates a beacon
+        anomaly sequence when process variables from the IOCs reconnect and
+        when it rereads access security. Thus causes MEDMs to reissue search
+        requests for unconnected PVs. Used to limit the beacon sequences, and
+        hence the search requests. Search requests last for about 8 min., so
+        it is not necessary to reissue beacon anomalies much more frequently
+        than 8 min. The default is 300 (5 minutes).</td>
+    </tr>
+    <tr>
+      <td>-server</td>
+      <td>Start in server mode. Start a daemon that watches the Gateway and
+        automatically restarts it if it dies. Not available on WIN32. See <a
+        href="#ServerMode">Server Mode</a>.</td>
+    </tr>
+    <tr>
+      <td>-mask &lt;string&gt;</td>
+      <td>Event mask that is used for connections to the IOCs. Use any
+        combination of v (value), a (alarm), l (log). The default is va
+        (forward value and alarm change events). Also see option -archive.</td>
+    </tr>
+    <tr>
+      <td>-prefix &lt;string&gt;</td>
+      <td>Set the prefix for the Gateway <a href="#ProcessVariables">internal
+        process variables</a>. Defaults to the hostname on which the Gateway
+        is running.</td>
+    </tr>
+    <tr>
+      <td>-uid &lt;integer&gt;</td>
+      <td>Run the Gateway server as this user id number. The Gateway does a
+        setuid(2) to this uid. Not available on WIN32.</td>
+    </tr>
+    <tr>
+      <td>-gid &lt;integer&gt;</td>
+      <td>Run the Gateway server as this group id number. The Gateway does a
+        setgid(2) to this uid. Not available on WIN32.</td>
+    </tr>
+    <tr>
+      <td>-archive</td>
+      <td>Use separate archive monitors (which honor ADEL instead of MDEL)
+        when archive client connects. This is the preferred method (in
+        opposite to -mask) when the gateway should be used by archivers and
+        "normal" clients (medm) at the same time.</td>
+    </tr>
+    <tr>
+      <td>-no_cache</td>
+      <td>Do not use cached (monitored) values when a client does ca_get.
+        This results in higher network traffic to the IOC but returns always
+        the current value, even if no monitor event had been send 
+        (e.g. because of a MDEL). This also solves problems with record
+        fields like HOPR or EGU if they are modified during run-time.
+      </td>
+  </tbody>
+</table>
+<br>
+
+
+<p>A typical command line is:</p>
+<pre>% gateway -log gateway.log -cip 164.54.3.255 -sip 164.54.188.65 -server -archive -no_cache</pre>
+
+<p>For the command-line options that set environment variables, an
+alternative would be to set them yourself before starting the Gateway instead
+of using the option.</p>
+
+<p>With EPICS 3.13, there should be no more than one portable server, such as
+a Gateway, running on a workstation. The reason is that there is not
+sufficient information in the beacons to distinguish among servers on the
+same host. Clients such as MEDM must treat their beacons as one set of beacon
+signals and will see sum and difference frequencies. They will likely
+interpret this as an IOC coming up and will continuously reissue their
+outstanding search requests. As a result, if the Gateway is one of two
+portable servers on the same host, it will be causing a problem. Two servers
+on the same host should not be a problem with 3.14 servers. It is not clear
+what will happen with a mixture of 3.13 and 3.14 servers on the same
+workstation. That situation should be avoided.</p>
+
+<p>The Gateway makes two files, <strong>gateway.killer</strong> and
+<strong>gateway.restart</strong>, when it starts. The file
+<strong>gateway.killer</strong> contains a summary of the settings used, as
+well as commands to kill the current Gateway, kill the server if in server
+mode, execute the <a href="#Report">commands file</a>, and execute the <a
+href="#Report">Process Variable Report</a>. It is a valid shell script, and
+the only line not commented is the one which kills the server in server mode
+or the current Gateway otherwise. Consequently, it can be run to kill the
+server in server mode or the current Gateway otherwise. The other command
+lines can be pasted to a shell to do the other actions. The file<strong>
+gateway.restart</strong> can be used to kill the current Gateway, whether in
+server mode or not. These files and features are not available on WIN32.</p>
+
+<p>The Gateway can also create a file named <strong>gateway.reserve</strong>.
+It does this to get around a problem that a process can only open files with
+file descriptors (FDs) below a certain limit (256 on Solaris). If there are
+connections to more than roughly this number of IOCs, not uncommon in a
+production environment, there is no FD available to reread the <a
+href="#AccessSecurity">access security</a> and <a href="#Report">command</a>
+files. The Gateway gets around this by reserving a FD pointing to
+<strong>gateway.reserve</strong>. Do not delete
+<strong>gateway.reserve</strong>. Also note that if reading the access
+security fails for this or any other reason, the access security will go to
+the default, not what it was before the failure.</p>
+
+<p>The number of threads on Linux is determined by the maximum user space,
+about half of the 32-bit address space or about 2 GB. The maximum number of
+threads is thus 2 GB divided by the stacksize (typically 10240 KB) giving
+about 204 threads in the typical case. Channel Access uses two threads for
+each IOC connection, one for receive and one for send. This limits the
+Gateway from connecting to more than about 100 IOCs. If the stacksize were
+decreased to say, 4096 KB (ulimit -s 4096), then about 256 IOCs would be
+allowed. The APS Linux Gateway currently uses this number. Starting with Base
+3.14.7, EPICS allocates memory for threads more efficiently, and you should
+not have to change the stacksize.</p>
+
+<p>If arrays larger then 16 KB should be passed through the gateway, the
+environment variable EPICS_CA_MAX_ARRAY_BYTES must be set to a sufficiently
+high value before the gateway is started. Set it at least to the maximum value
+used on any IOC.</p>
+
+<h2><a name="Using">Using the Gateway</a></h2>
+
+<p>To use the Gateway as your process variable server, it is usually only
+necessary to set your EPICS_CA_ADDR_LIST environment variable to the address
+used for the -sip <a href="#Starting">command-line</a> option when the
+Gateway was started. If want to use more than one server, add them all to the
+list for EPICS_CA_ADDR_LIST, separated by spaces. You probably also want to
+set EPICS_CA_AUTO_ADDR_LIST to NO to prevent also searching the local network
+for servers. You would certainly do this if there are IOCs on the local
+network that might have process variables with the same names as ones the
+Gateway would find. They would then be found from two servers, and your EPICS
+application would likely complain. If the Gateway is using a non-standard
+port, you need to set EPICS_CA_SERVER_PORT to the number used with -sport
+when the Gateway was started. Then just run your EPICS application, for
+example, MEDM.</p>
+
+<p>To stop the Gateway, use the <strong>gateway.killer</strong> file
+(described under <a href="#Starting">Starting the Gateway</a>), set the
+<strong>gateway.quitFlag</strong> or <strong>gateway.quitServer</strong> flag
+(described under <a href="#ProcessVariables">Gateway Process Variables</a>),
+or kill it in the usual way for your operating system. It may take a while to
+completely shut down. This is owing to EPICS cleanup processes that run after
+the program has officially exited. These processes may also print error
+messages after the Gateway prints its termination message just before calling
+exit. It is a good idea to check that the Gateway has truly shut down. This
+behavior may be corrected in future releases of base.</p>
+
+<p></p>
+
+<h2><a name="ErrorMessages">Error messages</a></h2>
+
+<p>The Gateway gets error messages from several places, including internally,
+the Channel Access Server library, and the Channel Access Client library.
+These errors typically appear in the log. The Gateway internal messages
+usually have a timestamp. Messages from the Channel Access Server library are
+typically sent to the EPICS Errlog facility and are received by the Gateway,
+often with different lines of the message being received separately. These
+messages typically do not have a timestamp, and the Gateway puts a line in
+the log with a timestamp when it thinks the message is complete. This line
+will say "!!! Errlog message received (message is above)". You must try to
+decide what lines above this line comprise the message. The problem is
+compounded by the fact that other kinds of messages may be interspersed
+between the lines for the Errlog message. The Channel Access Server library
+can also write messages directly. The Channel Access Client library can use
+the Errlog facility or send exception messages to the Gateway. The Errlog
+messages are handled as described. The exception messages are printed with as
+much additional information as is available and will start with a line with a
+timestamp saying "gateServer::exCB: Channel Access Exception:". Common
+exception messages, such as "Virtual circuit unresponsive" and "Virtual
+circuit disconnect" only print a single, timestamped line without the
+additional information. In most cases the Gateway prints a line with a
+timestamp saying how it was terminated. If the process is killed with SIGKILL
+(-9) or the machine is rebooted, this line has no chance to appear. In all
+cases the Gateway attempts to timestamp messages as timing is often important
+in diagnosing problems.</p>
+
+<h2><a name="Building">Building the Gateway</a></h2>
+
+<p>The Gateway uses 3.14 makefiles as it can only be built with 3.14. To
+build it you need to:</p>
+<ol>
+  <li>Obtain base and put it at the same directory level as extensions. Use
+    at least base 3.14.</li>
+  <li>Do a make in base to build base.</li>
+  <li>Obtain extensions/configure.</li>
+  <li>Change extensions/configure/RELEASE so EPICS_BASE points to your
+  base.</li>
+  <li>Do a make in extensions/config.</li>
+  <li>Make sure that either GNU or Perl regular expressions are
+   installed on your system. If neither is available, obtain the GNU
+   Regex extension and build it in extensions/src/gnuregex.</li>
+  <li>Obtain the Gateway directory and put it under
+  extensions/src/gateway.</li>
+  <li>Check the settings in extensions/src/gateway/Makefile.</li>
+  <li>Do a make in extensions/src/gateway.</li>
+</ol>
+
+<p>See your version of base for more information on the EPICS build system.
+The Gateway can also be built with 3.13 makefiles, but you would have to
+create Makefile and Makefile.Host yourself to do that.</p>
+
+<h2><a name="AccessSecurity">Access Security</a></h2>
+
+<p>The Gateway applies access security in addition to any access security
+that may be implemented in the IOCs or other servers to which it connects. It
+supplements but cannot override IOC access security. The access security is
+specified in two files,<strong> gateway.pvlist</strong> and
+<strong>gateway.access</strong>, by default. See -pvlist and -access on the<a
+href="#Starting"> command line</a>. The first file,
+<strong>gateway.pvlist</strong>, specifies what process variable name
+patterns are allowed and denied, and is described in more detail below. The
+second, <strong>gateway.access</strong>, specifies the access security rules.
+These two files are read at startup.</p>
+
+<p>The access security can be changed on demand by setting the internal
+process variable <strong>gateway:newAsFlag</strong> (see<a
+href="#ProcessVariables"> Gateway Process Variables</a>) or by using the
+command file (see <a href="#Report">Reports</a>). This causes the two files
+to be reread and the access security to be changed accordingly. After
+rereading access security, the Gateway generates a beacon anomaly, which will
+cause MEDMs to reissue search requests for unfound PVs.</p>
+
+<p>Note that if reading the access security fails, the access security will
+go to the default, not what it was before the failure.</p>
+
+<p>The access security rules specified in <strong>gateway.access</strong> are
+the same as used for access security in IOCs. In fact, both IOCs and the
+Gateway use much of the same access-security code. These rules and the
+concepts can be complicated and will not be reproduced in this document. See
+the<a href="#ChannelAccess"> Application Developers Guide</a> for more
+information. It can be noted that user names are case sensitive and host
+names are not. WIN32 may use a different case than UNIX for the same account.
+In this case user names must be entered with both versions. There is a sample
+file, gateway.access, in the source distribution and reproduced <a
+href="GATEWAY.access">here</a> to get you started. The version in the
+distribution may be more recent.</p>
+
+<p>The pvlist file is specific to the Gateway. Its function is to specify
+what process variable name patterns are allowed or denied and to optionally
+associate patterns with access security groups and security levels in the
+access file. The patterns are either Perl compatible regular expressions
+(PCRE) or GNU-style regular expressions, depending on the USE_PCRE variable
+in Makefile. (See a UNIX book for more information about regular expressions.)
+In addition, inverted regular experessions (starting with !) are supported
+depending on the USE_NEG_REGEXP variable in Makefile. For compatibility
+with earlier versions of the gateway, PCRE and inverted regular expressions
+are disable by default. There is a sample file,
+gateway.pvlist, in the source distribution and reproduced <a
+href="GATEWAY.pvlist">here</a> to get you started. The version in the
+distribution may be more recent. Directions for this file are in the sample
+pvlist file as well as here.</p>
+
+<p>The lines in the pvlist file are of the following four forms:</p>
+<ol>
+  <li>EVALUATION ORDER &lt;eval-order&gt;</li>
+  <li>&lt;pv-name-pattern&gt; DENY [FROM] [&lt;host&gt; ...]</li>
+  <li>&lt;pv-name-pattern&gt; ALIAS &lt;real-pv-name&gt; [&lt;asg&gt;
+    [&lt;asl&gt;]]</li>
+  <li>&lt;pv-name-pattern&gt; ALLOW [&lt;asg&gt; [&lt;asl&gt;]]</li>
+</ol>
+
+<p>where:</p>
+<ul>
+  <li>&lt;eval-order&gt; is DENY, ALLOW or ALLOW, DENY</li>
+  <li>&lt;pv-name-pattern&gt; is a regular expression that matches process
+    variable names.</li>
+  <li>&lt;host&gt; is an unqualified host name, e.g. hydra.</li>
+  <li>&lt;real-pv-name&gt; is a substitution pattern that specifies the real
+    process variable name. Occurrences of \1 ... \9 in &lt;real-pv-name&gt;
+    are replaced by matched sub-expressions in the
+  &lt;pv-name-pattern&gt;.</li>
+  <li>&lt;asg&gt; is an access security group as specified in the access
+    file. [The default group is DEFAULT.]</li>
+  <li>&lt;asl&gt; is the access security level (0 or 1). These numbers
+    pertain to the settings for particular fields in a record in an IOC.
+    Permission for level 1 implies permission for level 0. See the<a
+    href="#ChannelAccess"> Application Developers Guide</a> for more
+    information on access security group and access security level.</li>
+</ul>
+
+<p>In this version of the gateway, DENY FROM is enabled by default again.
+It can be useful if access from certain hosts should be denied only for some
+channels. If access should be denied for all channels, it is more efficient
+to use -signore. DENY FROM can be disabled with the USE_DENY_FROM variable
+in Makefile.</p>
+
+<p><strong>EVALUATION ORDER</strong></p>
+
+<p>This will set the evaluation order that is used when a client requests a
+process variable. Setting this to "DENY, ALLOW" will allow access to a
+process variable name that matches both a DENY and an ALLOW pattern. "ALLOW,
+DENY" will make a DENY override an ALLOW for the same variable. (This is the
+default.)</p>
+
+<p>If DENY FROM is enabled, then matching DENY FROM host-name patterns will
+always override matching ALLOW process-variable-name patterns.</p>
+
+<p>Stated another way, the Gateway keeps three lists for: DENY FROM (if
+enabled), DENY, and ALLOW. The DENY FROM list is searched first, and if the
+host name is found, access is disallowed. If the order is ALLOW, DENY, the
+DENY list is searched, and if the process variable name is found, access is
+disallowed. Then the ALLOW list is searched, and if the name is found, access
+is allowed, otherwise it is disallowed. Disallowed means the Gateway returns
+that it does not have the process variable when the <strong>Exist
+Test</strong> is called. In addition, for safety, it will not create a
+connection to an MEDM.</p>
+
+<p>The lines in the pvlist file are read from bottom to top. The first rule
+in each list that matches is used, so the most general rules should be placed
+first.</p>
+
+<p><strong>DENY / DENY FROM</strong></p>
+
+<p>The Gateway will ignore requests for any process variable that matches the
+DENY pattern, depending on the EVALUATION ORDER and whether there is also an
+ALLOW rule that matches. This can be used to block the Gateway from
+responding to groups of process variables. DENY FROM will block the process
+variables only for the given hosts. This can be useful to prevent loops
+caused by forwarding to other Gateways. However, the host name lookup for
+each <strong>Exist Test</strong> can take considerable time. Moreover, the
+same result can be accomplished via the -signore <a
+href="#Starting">command-line</a> option. See the <a
+href="#SymmetricGateways">symmetric Gateway</a> configuration below for an
+example.</p>
+
+<p><strong>ALIAS</strong></p>
+
+<p>This defines a process variable alias and allows it as a pattern for names
+which the Gateway should serve. For process variable names that match
+&lt;pv-name-pattern&gt;, the Gateway translates the name into a real process
+variable name and uses the real name as if it had been the one specified. The
+&lt;real-pv-name&gt; may contain the special escape sequences \1 ... \9 which
+will be replaced by the nth subexpression matched. See a UNIX book on regular
+expressions for more information. There is an example in the<a
+href="GATEWAY.pvlist"> sample pvlist file</a>. Access security rules to be
+used for process variables matched by this pattern may be specified. If not
+specified, the defaults are the DEFAULT group and level 1. Apart from
+specifying an alias, this rule is functionally the same as ALLOW. Note that a
+PV can only belong to one access group and access level. If you specify
+access to a real PV via several different ALIAS or ALLOW rules that assign
+different groups or levels to the PV, then which of these groups and levels
+is used is undefined.</p>
+
+<p><strong>ALLOW</strong></p>
+
+<p>This is used to declare process variable names which the Gateway should
+serve. Access security rules to be used for process variables matched by this
+pattern may be specified. If not specified, the defaults are the DEFAULT
+group and level 1.</p>
+
+<p><strong>Note</strong></p>
+<ol>
+  <li>Commands are not case sensitive.</li>
+  <li>Patterns use GNU-style regular expressions. (See a UNIX book for
+    information on regular expressions.)</li>
+  <li>Any process variable not included in an ALLOW command is not allowed
+    access.</li>
+  <li>If no pvlist file is specified on the command line, a default rule ".*
+    ALLOW" will be created to handle all process variables.</li>
+  <li>The patterns are matched in reverse order; that is, you should always
+    specify general rules before specific rules.</li>
+</ol>
+
+<h2><a name="PutLogging">Put Logging</a></h2>
+
+<p>It is possible to log whenever someone writes to a process variable. (A
+write is sometimes called a "put" and a read is called a "get".) To do this
+you need to specify -putlog on the<a href="#Starting"> command line</a> when
+the Gateway is started and specify a filename for the put logging. There
+needs to be an access security group in the <strong>gateway.access</strong>
+file that has a rule with WRITE and TRAPWRITE specified, for example,
+"RULE(1,WRITE,TRAPWRITE)". (The security level could also be 0.) Then
+whenever there is a write (or put) to any process variable in that group, it
+will be logged in the specified putlog file. As with the log file, this file
+will be automatically renamed whenever the Gateway restarts. An example may
+be found in the<a href="GATEWAY.access"> sample access file</a>, where writes
+are logged for process variables that belong to the GatewayAdmin group. Using
+the <a href="GATEWAY.pvlist">sample pvlist file</a>, these would be those
+that fit the pattern "gateway:*Flag".</p>
+
+<h2><a name="BeaconAnomalies">Beacon Anomalies and Search Requests</a></h2>
+
+<p>A server sends beacons, which are broadcast UDP packets, at regular
+intervals, EPICS_CA_BEACON_PERIOD, 15 s by default. The clients, such as
+MEDM, monitor these heartbeats. When there is a beacon anomaly, defined as
+anything that is different from this regular pattern, the clients reissue
+search requests for their unconnected PVs.</p>
+
+<p>A client sends search requests when it wants to connect to a process
+variable. A search request is a series of 100 UDP packets sent at
+increasingly longer intervals. It takes approximately 8 min. to complete the
+sequence. In most cases a server responds on the first or second packet; the
+connection process between the server and the client begins; and the search
+sequence ends. However for those PVs that are not found, the potential for a
+connection to happen exists for approximately 8 min., as long as the packets
+are still going out.</p>
+
+<p>When client gets a hangup message from the server, it closes the TCP
+connection, the process variable is marked as disconnected (MEDM screens turn
+white), and search requests are reissued. In 3.13 when a client has no
+communication from the server for EPICS_CA_CONN_TMO seconds (15 s by
+default), it sends an "are you there" message to the server. If there is no
+reply in 5 sec, it closes the TCP connection, the process variable is marked
+as disconnected, and search requests are reissued, the same as for a hangup.
+In 3.14, it marks the connection as disconnected, but does not close the TCP
+connection nor reissue beacons. The client may get a "Virtual circuit
+unresponsive" message. This is in part to prevent search-request storms under
+bad network conditions.</p>
+
+<p>When a server, including the Gateway comes up, it intentionally broadcasts
+an irregular pattern for a short time (a particular form of beacon anomaly)
+so the clients will know a new server is online and reissue their outstanding
+search requests in case it might have those PVs. The Gateway also broadcasts
+this irregular pattern when a PV beomes connected again after having been
+disconnected and also when <a href="#AccessSecurity">access security</a> is
+reread. This is so the MEDMs will know to try to reconnect.</p>
+
+<p>For security reasons some network administrators will not allow UDP
+broadcasts to cross subnet boundaries. If this is the case, then when the
+MEDM is on a different subnet than the Gateway, it will not see beacons at
+all and will not be able to tell if the Gateway has come up, This is a common
+case in large installations. Owing to the length of the search request
+sequence, if a server such as the Gateway goes down and comes back up within
+approximately 8 min,. the MEDM will reconnect. Otherwise, it will not, unless
+something else happens to make it reissue its searches. One such thing is to
+try to connect to a new PV. This causes a client to reissue outstanding
+searches along with the search for the new one. The latest versions of <a
+href="http://www.aps.anl.gov/epics/extensions/medm/index.php"> MEDM</a> and
+<a
+href="http://www.aps.anl.gov/epics/extensions/StripTool/index.php">StripTool</a>
+have a button to try to reconnect. In any event, Gateway administrators
+should be careful to not have a long delay between killing and restarting a
+Gateway if possible.</p>
+
+<h2><a name="Report">Reports</a></h2>
+
+<p>The Gateway prints three kinds of reports: (1) the Virtual Connection
+Report, which includes all MEDM or other client connections to all process
+variables; (2) the Process Variable Report, which includes all process
+variables grouped by state; and (3) the Access Security Report, which
+includes the allowed and denied process-variable patterns from the pvlist
+file, <strong>gateway.pvlist</strong>, by default. The Gateway prints its
+reports to the report file, <strong>gateway.report</strong>, by default,
+appending them if the file already exists. These reports can be long.</p>
+
+<p>The reports can be initiated by setting the associated <a
+href="#ProcessVariables">internal process variable</a>, for example,
+<strong>gateway:report1Flag</strong>, to 1. They can also be initiated by
+sending a USR1 signal to the Gateway. (Use "kill -USR1
+&lt;gateway-pid&gt;".). This causes the command file,
+<strong>gateway.command</strong>, by default, to be read and the specified
+reports executed. The command file can be modified to do any combination of
+the three reports, as well as to reread the access security files. See the
+-command <a href="#Starting">command-line option</a> for more details and an
+example. The Process Variable Report can be executed by sending a USR2
+signal. (Use "kill -USR2 &lt;gateway-pid&gt;".) The Gateway makes a file,
+<strong>gateway.killer</strong>, when it starts. The commands and the correct
+pids are printed in that file, so you can look at it to get the appropriate
+command lines. Signals and the <strong>gateway.killer</strong> file are not
+available on WIN32.</p>
+
+<h2><a name="ServerMode">Server Mode</a></h2>
+
+<p>The Gateway can be operated in server mode by specifying -server on the
+command line. In this mode a server process is started that in turn starts
+the regular Gateway process and then watches it and automatically restarts it
+if it dies. Using this mode the Gateway can recover from crashes. The running
+Gateway can effectively be reset by killing it via the<strong>
+gateway:quitFlag</strong> process variable, by running
+<strong>gateway.restart</strong>, or by killing the process in some other
+way. When any of these methods is used or the Gateway crashes, a new instance
+of the Gateway is started. The server process itself can be killed by setting
+the <strong>gateway:quitServerFlag</strong>, by running
+<strong>gateway.killer</strong>, or by otherwise killing the server process.
+Then no more regular Gateway processes will be automatically started.</p>
+
+<p>In order to avoid runaway creation of processes, there can only be ten
+restarts in any ten-minute interval. If the number of restarts in this
+interval exceeds this limit, the server will be stopped and no more processes
+will be created.</p>
+
+<p>This feature is not available on WIN32.</p>
+
+<h2><a name="ProcessVariables">Gateway Process Variables</a></h2>
+
+<p>The Gateway publishes several process variables, allowing you to control
+it and monitor it. By default these have a prefix, which is the name of the
+host machine, but this can be changed by -prefix in the<a href="#Starting">
+command-line options</a>. Here, we will use the prefix "gateway". See the <a
+href="#Introduction">Introduction</a> for a more detailed description of the
+states and concepts.</p>
+
+<p>The Gateway internal process variables are not record based as in an IOC.
+They do have a DESC field, however. This avoids delays when using PvInfo in<a
+href="http://www.aps.anl.gov/epics/extensions/medm/index.php"> MEDM</a> and
+allows <a
+href="http://www.aps.anl.gov/epics/extensions/StripTool/index.php">StripTool</a>
+to put a description in the legend. In older versions of the Gateway, the
+internal process variables used a dot as a separater rather than a colon.
+When the DESC field was added, they were changed to use a colon. This makes
+them more consistent with records in IOCs, and allows MEDM and StripTool to
+properly determine the name for the DESC field. The sample <a
+href="GATEWAY.pvlist">GATEWAY.pvlist</a> file shows how to set aliases if you
+want to use the old names. The old names will cause MEDM and StripTool to not
+correctly form the name for the DESC field, however. This will cause delays
+for PvInfo in MEDM, and StripTool will not display the descriptions in the
+legend.</p>
+
+<p><strong>gateway:vctotal</strong></p>
+
+<p>This is the total number of VC objects and should be the same as
+<strong>gateway:active<strong>, except for short, transient
+situations.</strong></strong></p>
+
+<p><strong>gateway:pvtotal</strong></p>
+
+<p>This is the number of PV objects.</p>
+
+<p><strong>gateway:connected</strong></p>
+
+<p>This is the number of connected PV objects, that is, process variables for
+which the Gateway has a working connection to the IOC. The connections may be
+<strong>Active</strong> or <strong>Inactive</strong>. In earlier versions of
+the Gateway, this was named <strong>gateway:alive</strong>.</p>
+
+<p><strong>gateway:active</strong></p>
+
+<p>This is the number of <strong>Active</strong> connections. The connection
+is <strong>Active</strong> if an MEDM is attached to the Gateway and using
+the process variable</p>
+
+<p><strong>gateway:inactive</strong></p>
+
+<p>This is the number of <strong>Inactive</strong> connections. The
+connection is <strong>Inactive</strong> if no MEDM connected to the Gateway
+is using it.</p>
+
+<p><strong>gateway:unconnected</strong></p>
+
+<p>This is the number of PV objects which are <strong>Connecting</strong>,
+<strong>Dead</strong>, or <strong>Disconnected</strong>. There is no working
+connection to an IOC but the PV object is still around. There is no VC
+object.</p>
+
+<p><strong>gateway:connecting</strong></p>
+
+<p>This is the number of PV objects which are <strong>Connnecting</strong>,
+that is, which have just been created and are trying to connect to an IOC.</p>
+
+<p><strong>gateway:disconnected</strong></p>
+
+<p>This is the number of PV objects which are <strong>Disconnected</strong>,
+that is, which were formerly connected but have lost the connection.</p>
+
+<p><strong>gateway:dead</strong></p>
+
+<p>This is the number of PV objects which are <strong>Dead</strong>, that is,
+which did not connect and are scheduled for removal.</p>
+
+<p><strong>gateway:fd</strong></p>
+
+<p>This is the number of file descriptors in use by the gateway. This process
+variable will only be available if registering file descriptors is enabled in
+the Gateway when it is built. Not registering them appears to significantly
+decrease the CPU usage, so this process variable will probably not be
+available. It requires a special switch to be set when the Gateway is
+built.</p>
+
+<p><strong>gateway:clientEventRate</strong></p>
+
+<p>This is the rate in Hz at which client events are happening. Client events
+include such things as attempted read and writes, connection changes, value
+changes, and access rights changes. They relate to communication from the
+IOC.</p>
+
+<p><strong>gateway:clientPostRate</strong></p>
+
+<p>This is the rate in Hz at which events are posted from the VC object to
+CAS and hence to the MEDMs. It is independent of the number of MEDMs
+(providing there is at least one). It tends to be similar to the
+clientEventRate; but only value changes cause post events. The other events
+do not contribute.</p>
+
+<p>In earlier versions of the Gateway this was named<strong>
+gateway:postEventRate</strong>.</p>
+
+<p><strong>gateway:existTestRate</strong></p>
+
+<p>This is the rate in Hz at which the Gateway receives search requests. For
+each search request, it has to do an <strong>Exist Test</strong> to see if it
+has the process variable or not. If it is not already connected to the
+process variable, it creates a PV object which itself initiates a series of
+search requests to the IOCs. See the <a href="#Introduction">Introduction</a>
+for more information on search requests. <strong>Exist Tests</strong> put a
+load on the Gateway. For process variables that do not exist, there can be
+many unsuccessful <strong>Exist Tests</strong>. See <a
+href="http://www.aps.anl.gov/epics/extensions/caSnooper/index.php">CaSnooper</a>
+for a tool to monitor <strong>Exist Tests</strong>.</p>
+
+<p><strong>gateway:loopRate</strong></p>
+
+<p>This is the rate in Hz at which the Gateway executes its main loop. The
+main loop consists of a call to CAS followed by a call to CAC followed by
+Gateway housekeeping routines. The call to CAS lasts for 10 ms unless there
+is activity on a file descriptor (in which case it returns early) or if it
+takes longer than that to process its callbacks (in which case it returns
+late). The call to CAC takes as long as it takes to do the work required. The
+Gateway housekeeping typically uses comparatively little time. As the Gateway
+becomes loaded down, the calls to CAS take longer and so do the calls to CAC
+until eventually all the available CPU time is used. As the load increases,
+the loopRate tends to decrease. However, no load can have a lower loop rate
+than with some load because the call to CAS waits the whole 10 ms. It is a
+rule of thumb that CAC should be called at least every 100 ms. By examining
+the loopRate you can tell if this is happening. That is, it should remain
+above 10 Hz.</p>
+
+<p><strong>gateway:cpuFract</strong></p>
+
+<p>This is the fraction of the available CPU time that is being used by the
+Gateway; that is, the CPU time divided by the elapsed time. It is a good
+monitor of the load on the Gateway. On WIN32 the cpuFract is always 1 and not
+useful. This is owing to their implementation of the clock() function. On
+Linux, threads are separate processes, and the CPU time for them is not
+included, only that for the main process. This is because clock() on Linux
+returns only the CPU time for the process that called it. If there is more
+than one processor, the cpuFract could exceed unity. Note that Top on Linux
+shows the CPU time divided by the number of processors and optionally lists
+all threads separately. Thus, on Linux, the Gateway cpuFract should agree
+with the Top value for the main Gateway process multiplied by the number of
+processors. You can use Top to monitor the CPU time for all the Gateway
+processes if you need that.</p>
+
+<p><strong>gateway:load</strong></p>
+
+<p>This is the load average for the machine on which the Gateway is running.
+The load average is the number of processes in the system run queue averaged
+over one minute. It is implemented by the getloadavg() function, and you can
+look at the man page for more information. It is the same as the process
+variable with the same name in IOCs. It is another way to monitor the load.
+On WIN32 it is always zero and not useful.</p>
+
+<p><strong>gateway:serverEventRate</strong></p>
+
+<p>This is the rate in Hz at which CAS processes events. It tends to be the
+clientEventRate multiplied by the number of MEDMs looking at the process
+variable.</p>
+
+<p><strong>gateway:serverPostRate</strong></p>
+
+<p>This is the rate in Hz at which events are posted to CAS. If the Gateway
+is keeping up, this will be very close to the serverEventRate. If not, it
+will be higher and all posted events will not have been processed.</p>
+
+<p><strong>gateway:commandFlag</strong></p>
+
+<p>Writing a 1 to this process variable causes the command file to be
+processed. The process variable is reset to 0 after the Command File is
+processed. See the description of <a href="#Starting">command-line</a>
+arguments and the <a href="#Report">Reports</a> section for a description of
+the command file.</p>
+
+<p><strong>gateway:report1Flag</strong></p>
+
+<p>Writing a 1 to this process variable causes Report 1 to be appended to the
+report file. Report 1 is the <a href="#Report">VC Report</a>.The process
+variable is reset to 0 afterward.</p>
+
+<p><strong>gateway:report2Flag</strong></p>
+
+<p>Writing a 1 to this process variable causes Report 2 to be appended to the
+report file. Report 2 is the <a href="#Report">PV Report</a>.The process
+variable is reset to 0 afterward.</p>
+
+<p><strong>gateway:report3Flag</strong></p>
+
+<p>Writing a 1 to this process variable causes Report 3 to be appended to the
+report file. Report 3 is the <a href="#Report">Access Security Report</a>.
+The process variable is reset to 0 afterward.</p>
+
+<p><strong>gateway:newAsFlag</strong></p>
+
+<p>Writing a 1 to this process variable causes the access security files, by
+default <strong>gateway.access</strong> and <strong>gateway.pvlist</strong>,
+to be reread. The process variable is reset to 0 afterward. There is
+currently a problem on some platforms that files can only be opened using
+file descriptors 0 to 255. If there are many CA socket connections, there may
+not be a file descriptor in this range available. In that case the access
+security file will not be read and an error will appear in the log. There is
+a workaround in the Gateway for this problem for Solaris.</p>
+
+<p><strong>gateway:quitFlag</strong></p>
+
+<p>Writing a 1 to this process variable causes the Gateway process to exit.
+If the Gateway is in server mode, it will be restarted as a new process. In
+that case it functions more as a reset.</p>
+
+<p><strong>gateway:quitServerFlag</strong></p>
+
+<p>Writing a 1 to this process variable causes the Gateway server process to
+end, also ending the current gateway. No more Gateways will be started by the
+current server. If the Gateway is not in server mode, it has the same effect
+as <strong>gateway:quitFlag</strong>.</p>
+
+<h2><a name="AlarmHandler">Alarm Handler</a></h2>
+
+<p>The Alarm Handler works through the Gateway. The following discussion is
+for those who understand Channel Access in more depth: For most process
+variables the Gateway can get all of its information in a single DBR_TIME_xxx
+structure, for example, DBR_TIME_DOUBLE, where xxx is the native type of the
+process variable. These structures are defined in db_access.h. The Gateway
+establishes an event handler for this structure and gets notified when it
+changes and modifies it when it needs to be changed. There is only one
+structure per process variable. This structure does not contain all the
+information needed by the Alarm Handler, so the Gateway need to keep track of
+another structure, DBR_STSACK_STRING. This is only done when needed. A
+related issue is that the Gateway does not handle the RTYP field in a process
+variable from an IOC. To do this it would have to handle DBR_CLASS_NAME. Each
+structure the Gateway needs to handle adds to its overhead.</p>
+
+<h2><a name="GUIInterface">GUI Interface</a></h2>
+
+<p>Owing to its <a href="#ProcessVariables">published internal process
+variables</a>, you can monitor and control the Gateway via MEDM or another
+tool. You can set the writable internal process variables (if you have
+access) and cause the Gateway to print reports, reread the access security
+file, or quit. This is an example MEDM screen:</p>
+
+<p align="center"><img alt="hydraStats.adl" src="hydraStats.adl.gif"></p>
+
+<p>You could also add a Shell Command button to run a script to start the
+Gateway. The MEDM ADL file for this screen is included in the Gateway
+distribution as hydraStats.adl. Typically the Exec buttons operate so fast
+that you will not see the value change from 0, and the Cancel button is of
+little use. However, the chain of events is that the Exec button sets the
+process variable to 1, the Gateway notices this during the cleanup phase of
+the main loop, the appropriate action is executed, and the process variable
+is reset to zero.</p>
+
+<p>It is convenient to monitor and possibly record the state of the Gateway
+using <a
+href="http://www.aps.anl.gov/epics/extensions/StripTool/index.php">StripTool.</a>
+You could, of course, use any other EPICS monitoring tool of your choice.
+This is an example of using StripTool:</p>
+
+<p align="center"><img alt="hydra.rate.stp" src="hydra.rate.stp.gif"></p>
+
+<p>The StripTool configuration file for this image is included in the Gateway
+distribution as hydra.rate.stp. Note that for the example shown, the cpuFract
+is low, the loop rate is high, and the postRate's and eventRate's are nearly
+equal, indicating the Gateway is healthy.</p>
+
+<p><a name="APSGatewaysScreen">This is a screen that shows the status of all
+of the APS Gateways:</a></p>
+
+<p align="center"><img alt="GatewayOverview.adl"
+src="GatewayOverview.adl.Reduced.jpg"></p>
+
+<p>(<a href="GatewayOverview.adl.gif">Click here for full-size image</a>)</p>
+
+<p>The values for inactive and dead are not being used because these Gateways
+are mostly using Gateway 1.3, and those process variables did not exist for
+Gateway 1.3. This Gateway is running on the machine Hydra. The values for
+Hydra84 and Rhea are white because these Gateways are not visible from Hydra.
+Similarly, the Gateways running on Rhea and Hydra84 do not see the other two.
+The Gateways labeled r431 through r438 are reverse Gateways that allow the
+internal process variables for all the Gateways 1-34 to be seen on one MEDM
+screen. See below for a discussion of <a href="#ReverseGateway">Reverse
+Gateways</a>.</p>
+
+<p>The existTestRate for the reverse Gateways, whose server side is on the
+machine network, is similar to that seen by all IOCs and servers on the
+machine network and is used for monitoring channel access activity on that
+network.</p>
+
+<h2><a name="Gateway">Gateway Configurations</a></h2>
+
+<h3><a name="SymmetricGateways">Symmetric Gateways</a></h3>
+
+<p>The following shows a configuration in which each of three networks has a
+Gateway that finds process variables in IOCs on the other two networks. This
+is a configuration used at BESSY.</p>
+
+<p>However, note that if you are on say, Net A, and using the Gateway whose
+server is on Net A, then the client side of this Gateway sees the server side
+of the other two Gateways. However, these Gateways each see servers on Net A
+and consequently see the Net A Gateway. Therefore, the Net A Gateway can see
+process variables on IOCs on Net B and Net C directly and also through the
+other two servers. To prevent this loop, each Gateway must be configured to
+not allow process variables from the other two Gateways. This can be done
+through the -signore <a href="#Starting">command-line option</a>.</p>
+
+<p align="center"><img alt="Symmetric Gateways"
+src="SymmetricGateways.gif"></p>
+
+<p></p>
+
+<h3><a name="ReverseGateway">Reverse Gateway</a></h3>
+
+<p>The following configuration shows a reverse Gateway. In this configuration
+the four networks, Net A, Net B, Net C, and Net D, each has a Gateway that
+gets process variables from Net Z. This is a configuration used at Argonne.
+Net Z is the machine network, and the other networks belong to individual
+experimental teams. These teams have read access to the machine network and
+whatever access they want to the IOCs on their own network. Argonne at
+present has eight of these configurations, most with four Gateways plus a
+reverse Gateway. Owing to the reverse Gateways, the internal process
+variables for all these Gateways can be seen on one MEDM screen, as in the <a
+href="#APSGatewaysScreen">example above</a>, through a Gateway that sees
+process variables on the machine network. One does not need (and typically
+does not have) access to each of these private networks.</p>
+
+<p>To prevent looping, the reverse Gateway only allows the internal process
+variables from the other four Gateways and itself, and each of the other
+Gateways denies the internal process variables from the other three. As a
+result these four Gateways do not see internal process variables from the
+other three. They do see the ones from other configurations of four. This
+limitation could be overcome by using one reverse Gateway for every regular
+Gateway. Note that another Gateway that is not on a network with the client
+side of any of the reverse Gateways does not need to deny anything and can
+see all the internal process variables from any of the Gateways in any of
+these configurations (as in the <a href="#APSGatewaysScreen">example
+above</a>).</p>
+
+<p align="center"><img alt="Reverse Gateway" src="ReverseGateway.gif"></p>
+
+<h2><a name="AliasGateway">Alias Gateway</a></h2>
+
+<p>It is possible to use the Gateway just to provide aliases for process
+variables, and the following configuration shows an alias Gateway. Only one
+subnet is needed. If an MEDM asks for the alias name, it is found through the
+Gateway. If it uses the real name, it is found through the IOC. The two names
+must be different to avoid finding the same process variable in two different
+servers.</p>
+
+<p align="center"><img alt="Alias Gateway" src="AliasGateway.gif"></p>
+
+<h2><a name="ChannelAccess">Channel Access</a></h2>
+
+<p><strong>Channel Access</strong> [CA] is the part of EPICS that governs
+communication between servers and clients. The two major parts are the
+<strong>Channel Access Server</strong> [CAS] and <strong>Channel Access
+Client</strong> [CAC, sometimes also just CA since there was originally no
+CAS]. A CAC, such as MEDM, uses functions in the CAC library for
+communication with EPICS and provides its own specific functionality on top
+of that. A server uses the CAS library for communication with EPICS and also
+provides its own specific functionality. A program that uses CAS is called a
+<strong>Server Tool</strong> to distinguish it from the CAS library itself.
+Servers that use CAS are called<strong> Portable Servers</strong>. The
+Gateway is a ServerTool, a Portable Server, a Channel Access Server, and also
+a Channel Access Client. There are also <strong>Soft IOC</strong>s, which,
+like Portable Servers, run on platforms such as Solaris, WIN32, and Linux.
+These do not currently use CAS and are not Portable Servers.</p>
+
+<p>You can find out more information by looking at the EPICS Channel Access
+Reference Manual and the Application Developers Guide. There is a version
+included with each EPICS release. They can be found by starting at <a
+href="http://www.aps.anl.gov/epics/modules/index.php">IOC Software</a> in the
+<a href="http://www.aps.anl.gov/epics/docs">EPICS Documentation</a> and
+following links to the release and point release of the desired EPICS
+base.</p>
+
+<h2><a name="Acknowledgements">Acknowledgements</a></h2>
+
+<p>Jeff Hill of Los Alamos National Laboratory, the person responsible for <a
+href="#ChannelAccess">Channel Access</a>, was of great help in developing the
+Gateway throughout its entire development.</p>
+
+<h2><a name="Copyright">Copyright</a></h2>
+
+<p>The Gateway is governed by the <a
+href="http://www.aps.anl.gov/epics/license/index.php">EPICS Open
+License.</a></p>
+<hr>
+
+<p><a href="http://validator.w3.org/check/referer"><img
+src="valid-html401.png" alt="Valid HTML 4.01!" border="0" align="right"
+height="31" width="88"></a></p>
+</body>
+</html>

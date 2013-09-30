@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Solaris rc3 script for EPICS CA gateway
+#
+
+GATEWAY=/home/helios/GATEWAY/gateway/gateway
+HOME_DIR=/home/helios/GATEWAY/gateway/`/usr/bin/uname -n`
+
+if [ $1 = "start" ]; then
+    if [ -f $GATEWAY ]; then
+        echo "Starting EPICS CA gateway "
+        /usr/bin/mkdir -p $HOME_DIR
+        $GATEWAY -log gateway.log -cip 164.54.3.255 -sip 164.54.188.65 -home $HOME_DIR -uid 265 -server
+    fi
+else
+    if [ $1 = "stop" ]; then
+        echo "Stopping EPICS CA gateway "
+        $HOME_DIR/gateway.killer
+    fi
+fi
+

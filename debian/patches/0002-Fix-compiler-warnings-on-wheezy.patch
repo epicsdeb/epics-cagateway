@@ -1,13 +1,13 @@
 From: Ralph Lange <Ralph.Lange@gmx.de>
-Date: Thu, 3 Oct 2013 10:01:18 -0700
+Date: Thu, 3 Oct 2013 10:58:07 -0700
 Subject: Fix compiler warnings on wheezy
 
 ---
  gateAs.cc     |  4 ++--
- gatePv.cc     |  4 ++--
+ gatePv.cc     | 12 ++++++------
  gateServer.cc |  6 +-----
  gateway.cc    | 10 +++++-----
- 4 files changed, 10 insertions(+), 14 deletions(-)
+ 4 files changed, 14 insertions(+), 18 deletions(-)
 
 diff --git a/gateAs.cc b/gateAs.cc
 index 982fc75..aeec3e4 100644
@@ -32,27 +32,37 @@ index 982fc75..aeec3e4 100644
  	gateAsHost *pNode;
  	while(pi.pointer())	{
 diff --git a/gatePv.cc b/gatePv.cc
-index 58eeae2..4b96843 100644
+index 58eeae2..e7b3e2f 100644
 --- a/gatePv.cc
 +++ b/gatePv.cc
-@@ -984,7 +984,7 @@ int gatePvData::get(readType read_type)
+@@ -982,10 +982,10 @@ int gatePvData::get(readType read_type)
+ 						}
+ 					}else
  					{
- 					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+-					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
++					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
  					  	"for %s.\n"
 -					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
+-					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
 +                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
- 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
++					  	timeStamp(),name()?name():"Unknown", (unsigned long) bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
  					}	
  				}				
-@@ -1009,7 +1009,7 @@ int gatePvData::get(readType read_type)
+ 			}
+@@ -1007,10 +1007,10 @@ int gatePvData::get(readType read_type)
+ 						}
+ 					}else
  					{
- 					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+-					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
++					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
  					  	"for %s.\n"
 -					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
+-					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
 +                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
- 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
++					  	timeStamp(),name()?name():"Unknown", (unsigned long) bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
  					}
  				}						
+ 			}	
 diff --git a/gateServer.cc b/gateServer.cc
 index 13b5908..6419619 100644
 --- a/gateServer.cc

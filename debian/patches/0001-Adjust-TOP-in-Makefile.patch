@@ -1,0 +1,21 @@
+From: Ralph Lange <Ralph.Lange@gmx.de>
+Date: Tue, 1 Oct 2013 08:30:14 +0200
+Subject: Adjust TOP in Makefile
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index f56cf7d..9079b7f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -11,7 +11,7 @@
+ 
+ # 3.14 Makefile for Gateway
+ 
+-TOP = ../..
++TOP = .
+ include $(TOP)/configure/CONFIG
+ 
+ # Use of GNU regex library (version 0.12) for patterns and aliasing

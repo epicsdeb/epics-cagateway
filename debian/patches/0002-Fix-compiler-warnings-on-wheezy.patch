@@ -1,0 +1,135 @@
+From: Ralph Lange <Ralph.Lange@gmx.de>
+Date: Thu, 3 Oct 2013 10:01:18 -0700
+Subject: Fix compiler warnings on wheezy
+
+---
+ gateAs.cc     |  4 ++--
+ gatePv.cc     |  4 ++--
+ gateServer.cc |  6 +-----
+ gateway.cc    | 10 +++++-----
+ 4 files changed, 10 insertions(+), 14 deletions(-)
+
+diff --git a/gateAs.cc b/gateAs.cc
+index 982fc75..aeec3e4 100644
+--- a/gateAs.cc
++++ b/gateAs.cc
+@@ -333,7 +333,7 @@ gateAs::~gateAs(void)
+ // Probably OK but not checked for reinitializing all of access
+ // security including the pvlist.
+ 	tsSLIter<gateAsHost> pi = host_list.firstIter();
+-	gateAsList* l;
++    gateAsList* l = NULL;
+ 	
+ 	gateAsHost *pNode;
+ 	while(pi.pointer())	{
+@@ -696,7 +696,7 @@ long gateAs::reInitialize(const char* afile, const char* lfile)
+ 	// Cleanup
+ #ifdef USE_DENYFROM
+ 	tsSLIter<gateAsHost> pi = host_list.firstIter();
+-	gateAsList* l;
++    gateAsList* l = NULL;
+ 	
+ 	gateAsHost *pNode;
+ 	while(pi.pointer())	{
+diff --git a/gatePv.cc b/gatePv.cc
+index 58eeae2..4b96843 100644
+--- a/gatePv.cc
++++ b/gatePv.cc
+@@ -984,7 +984,7 @@ int gatePvData::get(readType read_type)
+ 					{
+ 					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+ 					  	"for %s.\n"
+-					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
++                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
+ 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
+ 					}	
+ 				}				
+@@ -1009,7 +1009,7 @@ int gatePvData::get(readType read_type)
+ 					{
+ 					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+ 					  	"for %s.\n"
+-					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
++                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
+ 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
+ 					}
+ 				}						
+diff --git a/gateServer.cc b/gateServer.cc
+index 13b5908..6419619 100644
+--- a/gateServer.cc
++++ b/gateServer.cc
+@@ -1119,19 +1119,16 @@ gateServer::~gateServer(void)
+ 	// remove all PVs from my lists
+ 	gateVcData *vc,*old_vc;
+ 	gatePvNode *old_pv,*pv_node;
+-	gatePvData *pv;
+ 
+ 	while((pv_node=pv_list.first()))
+ 	{
+ 		pv_list.remove(pv_node->getData()->name(),old_pv);
+-		pv=old_pv->getData();     // KE: pv not used?
+ 		pv_node->destroy();
+ 	}
+ 
+ 	while((pv_node=pv_con_list.first()))
+ 	{
+ 		pv_con_list.remove(pv_node->getData()->name(),old_pv);
+-		pv=old_pv->getData();     // KE: pv not used?
+ 		pv_node->destroy();
+ 	}
+ 
+@@ -2255,8 +2252,7 @@ gateRateStatsTimer::expire(const epicsTime &curTime)
+ 	// Calculate the load using average over last minute.  Does not
+ 	// exist for WIN32.
+ 	double load[N_LOAD];
+-	int nProcesses;
+-	nProcesses=getloadavg(load,N_LOAD);	  
++    getloadavg(load,N_LOAD);
+ 	mrg->setStat(statLoad,load[N_LOAD-1]);
+ #endif
+ #endif
+diff --git a/gateway.cc b/gateway.cc
+index 2c0f693..eef7583 100644
+--- a/gateway.cc
++++ b/gateway.cc
+@@ -349,20 +349,20 @@ static int startEverything(char *prefix)
+ #endif
+ 
+ 	if(client_ip_addr) {
+-		int status=setEnv("EPICS_CA_ADDR_LIST",client_ip_addr,
++		setEnv("EPICS_CA_ADDR_LIST",client_ip_addr,
+ 		  &gate_ca_list);
+ 		// In addition, make EPICS_CA_AUTO_LIST=NO to avoid sending
+ 		// search requests to ourself.  Note that if
+ 		// EPICS_CA_ADDR_LIST is specified instead of -cip, then
+ 		// EPICS_CA_AUTO_ADDR_LIST=NO must be set also as this branch
+ 		// will not be taken.
+-		status=setEnv("EPICS_CA_AUTO_ADDR_LIST","NO",&gate_ca_auto_list);
++		setEnv("EPICS_CA_AUTO_ADDR_LIST","NO",&gate_ca_auto_list);
+ 		/*gjansa: for beacons*/
+ 		char *tempBuff;
+ 		tempBuff = getenv("EPICS_CAS_AUTO_BEACON_ADDR_LIST");
+ 		if(tempBuff != NULL){
+ 			if(strcasecmp(tempBuff,"NO")){
+-				status=setEnv("EPICS_CAS_AUTO_BEACON_ADDR_LIST","YES",&gate_beacon_ca_auto_list);
++				setEnv("EPICS_CAS_AUTO_BEACON_ADDR_LIST","YES",&gate_beacon_ca_auto_list);
+ 			}
+ 		}
+ 		gateDebug1(15,"gateway setting <%s>\n",gate_ca_auto_list);
+@@ -1044,7 +1044,7 @@ int main(int argc, char** argv)
+ 				fprintf(stderr,"\t[%s]\n",ptable[ii].parm);
+ 		}
+ 
+-		getcwd(home_directory,HOME_DIR_SIZE);
++        home_directory = getcwd(home_directory, HOME_DIR_SIZE);
+ 
+ 		// Get the default resources. The values of access_file,
+ 		// pvlist_file, command_file, putlog_file, and report_file
+@@ -1092,7 +1092,7 @@ int main(int argc, char** argv)
+ 			return -1;
+ 		}
+ 	}
+-	getcwd(home_directory,HOME_DIR_SIZE);
++    home_directory = getcwd(home_directory, HOME_DIR_SIZE);
+ 
+ 	// Get the default resources. The values of access_file,
+ 	// pvlist_file, command_file, putlog_file, and report_file depend

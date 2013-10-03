@@ -1,0 +1,36 @@
+Source: epics-cagateway
+Section: admin
+Priority: extra
+Maintainer: Ralph Lange <Ralph.Lange@gmx.de>
+Build-Depends: debhelper (>= 8), epics-debhelper (>= 8.10~),
+               epics-dev (>= 3.14.12.3-7~),
+               epics-pcas-dev (>= 3.14.12.3-7~),
+               epics-extensions-dev (>= 20130514.2~),
+Standards-Version: 3.9.4
+Homepage: http://www.aps.anl.gov/epics/extensions/gateway/index.php
+Vcs-Git: https://github.com/epicsdeb/epics-base.git
+Vcs-Browser: https://github.com/epicsdeb/epics-base
+
+Package: epics-cagateway
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: EPICS PV Gateway
+ The EPICS PV Gateway is both a Channel Access server and Channel Access client,
+ providing a means for many clients to access a PV while using only one
+ connection to the server that owns the process variable.
+ .
+ It protects critical servers while providing possibly restricted access to
+ published process variables. The Gateway typically runs on a machine with
+ multiple network interfaces, and its clients and the server may be on
+ different subnets.
+
+Package: epics-cagateway-dbg
+Section: debug
+Architecture: any
+Depends: epics-cagateway (= ${binary:Version}), ${misc:Depends},
+Description: EPICS PV Gateway (debug symbols)
+ The EPICS PV Gateway is both a Channel Access server and Channel Access client,
+ providing a means for many clients to access a PV while using only one
+ connection to the server that owns the process variable.
+ .
+ Debug symbols for EPICS PV Gateway.

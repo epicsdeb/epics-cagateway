@@ -1,0 +1,2 @@
+version=3
+https://launchpad.net/epics-gateway/+download https://launchpad.net/epics-gateway/.*/gateway(\d+)_(\d+)_(\d+)_(\d+)\.tar\.gz

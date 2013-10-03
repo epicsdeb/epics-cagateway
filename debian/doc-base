@@ -1,0 +1,9 @@
+Document: epics-cagateway
+Title: CA Gateway Manual
+Author: Ken Evans
+Abstract: This manual describes what the CA Gateway is, and how it can be used.
+Section: Network/Communication
+
+Format: HTML
+Index: /usr/share/doc/epics-cagateway/html/Gateway.html
+Files: /usr/share/doc/epics-cagateway/html/*

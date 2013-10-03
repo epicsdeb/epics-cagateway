@@ -1,0 +1,226 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" (C) Copyright 2013 Ralph Lange <Ralph.Lange@gmx.de>,
+.\"
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH CAGATEWAY 1 "October 03, 2013" "EPICS Tools"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+cagateway \- EPICS Channel Access Gateway
+.SH SYNOPSIS
+.B cagateway
+.RI [ options ]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B cagateway
+command.
+.PP
+.\" TeX users may be more comfortable with the \fB<whatever>\fP and
+.\" \fI<whatever>\fP escape sequences to invode bold face and italics,
+.\" respectively.
+The \fBcagateway\fP is both a Channel Access server and Channel Access client,
+and provides a means for multiple clients to access process variables from
+multiple servers while needing only one connection to the server
+that owns each process variable.
+It also provides additional access security beyond that on the origin server.
+It can thus protect critical servers while providing limited access
+to process variables.
+.PP
+The \fBcagateway\fP typically runs on a machine with multiple network interfaces,
+where the clients and servers may be on different subnets.
+.SH OPTIONS
+.TP
+.BI \-debug \ value
+Set debug level to \fIvalue\fP.
+.br
+(default: 0 = no debug info; useful values 0\-100)
+.TP
+.BI \-log \ file
+Set log file name to \fIfile\fP.
+.br
+(default: gateway.log)
+.TP
+.BI \-pvlist \ file
+Set PV list file name to \fIfile\fP.
+.br
+See the sample file gateway.pvlist in
+/usr/share/doc/epics-cagateway
+for a description of the file format.
+.br
+(default: gateway.pvlist)
+.TP
+.BI \-access \ file
+Set Access Security configuration file name to \fIfile\fP.
+PV rules in the pvlist file use groups and rules defined
+in this file. See the EPICS Application Developer's Guide
+for a description of Access Security and the
+configuration file format.
+.br
+(default: gateway.access)
+.TP
+.BI \-command \ file
+Set command file name to \fIfile\fP.
+The gateway commands from this file are executed when the
+USR1 signal is sent to the gateway process.
+.br
+(default: gateway.command)
+.TP
+.BI \-putlog \ file
+Set CA put log file name to \fIfile\fP.
+When CA put logging is defined (using TRAPWRITE in the
+Access Security configuration), the log is written to this file.
+.br
+(default: gateway.putlog)
+.TP
+.BI \-report \ file
+Set report output file name to \fIfile\fP.
+Output of the commands from the command file is appended
+to this file.
+.br
+(default: gateway.report)
+.TP
+.BI \-home \ directory
+Sets the gateway's home directory, where all command, log, and
+configuration files are searched.
+.br
+(default: current directory)
+.TP
+.BI \-sip " address list"
+List of <IP>[:<port>] addresses that the gateway's server side
+listens on for incoming requests.
+Sets the environment variable EPICS_CAS_INTF_ADDR_LIST.
+.br
+(default: all network interfaces)
+.TP
+.BI \-cip " address list"
+List of <IP>[:<port>] addresses that the gateway's client side
+uses to find PVs. Sets the environment variables
+EPICS_CA_AUTO_ADDR_LIST=NO and EPICS_CA_ADDR_LIST.
+.br
+(default: broadcast on all network interfaces)
+.TP
+.BI \-signore " address list"
+List of <IP>[:<port>] addresses that the gateway's server side
+completely ignores. Sets the environment variable
+EPICS_CAS_IGNORE_ADDR_LIST. Used to avoid loops in multi-gateway
+configurations.
+.br
+(default: none)
+.TP
+.BI \-sport \ port
+Set default server side port number to \fIport\fP.
+Sets the environment variable EPICS_CAS_SERVER_PORT.
+Explicit port numbers in address lists override this value.
+.br
+(default: 5064)
+.TP
+.BI \-cport \ port
+Set default client side port number to \fIport\fP.
+Sets the environment variable EPICS_CA_SERVER_PORT.
+Explicit port numbers in address lists override this value.
+.br
+(default: 5064)
+.TP
+.BI \-connect_timeout \ seconds
+Set the connection timeout to \fIseconds\fP. The gateway will
+mark a PV as non-existent if it is not found within this time.
+.br
+(default: 1)
+.TP
+.BI \-inactive_timeout \ seconds
+Set the inactive timeout to \fIseconds\fP. The gateway will
+hold the client-side PV connection for this time after the last
+subscription to the PV was cancelled.
+.br
+(default: 7200 = 2hrs)
+.TP
+.BI \-dead_timeout \ seconds
+Set the dead timeout to \fIseconds\fP. The gateway will remember
+a PV that was not found on its client-side for this time, and
+continue trying to connect.
+.br
+(default: 120 = 2min)
+.TP
+.BI \-disconnect_timeout \ seconds
+Set the disconnect timeout to \fIseconds\fP. The gateway will
+remember a PV that was previously connected but has been
+disconnected for this time. When such a held disconnected PV
+reconnects, the gateway sends a beacon signal to its clients
+to make them reconnect to the PV.
+.br
+(default: 7200 = 2hrs)
+.TP
+.BI \-reconnect_inhibit \ seconds
+Set the minimum time between sending reconnect beacons to
+\fIseconds\fP. This avoids clients continuously trying to
+reconnect their unconnected PVs which may put additional load
+on all CA servers on their network.
+.br
+(default: 300 = 5min)
+.TP
+.BI \-server
+Detach from controlling terminal and start a server daemon
+in the background. The server daemon will automatically restart
+the gateway in case it crashes.
+.TP
+.BI \-uid \ id
+Run the gateway server using \fIid\fP as effective numerical
+user id.
+.TP
+.BI \-gid \ id
+Run the gateway server using \fIid\fP as effective numerical
+group id.
+.TP
+.BI \-ro
+Run the gateway in strict read-only mode. This will override
+any Access Security configuration allowing write access.
+.TP
+.BI \-prefix \ tag
+Set \fItag\fP as the colon-separated prefix used for the
+gateway's statistics PVs. 
+.br
+(default: host name)
+.TP
+.BI \-mask " event mask"
+Set the \fIevent mask\fP that is used on the client-side
+connections. Any combination of v (value), a (alarm), and l (log).
+.br
+(default: va)
+.TP
+.BI \-archive
+Enable archiver monitors. For clients connecting with the l flag,
+a separate log event connection (using the l flag) is established.
+.br
+(default: disabled)
+.TP
+.BI \-no-cache
+Disables data caching, forwarding any CA get() operation
+to the client-side network.
+.br
+(default: cache enabled)
+.TP
+.BI \-help
+Print short instructions.
+.SH SEE ALSO
+The Channel Access Gateway is documented fully in its reference manual.
+On Debian systems, the reference manual should be located at
+/usr/share/doc/epics-cagateway/html/Gateway.html.
+.SH AUTHORS
+.IP 
+ Jim Kowalkowski, Janet Anderson, Ken Evans (APS)
+ Ralph Lange (HZB/BESSY II)
+ Gasper Jansa (cosylab)
+ Dirk Zimoch (PSI)
+ debianization and manpage by Ralph Lange (HZB/BESSY II)

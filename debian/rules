@@ -1,0 +1,92 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+# Backport magic for squeeze
+ifeq "$(DEB_HOST_MULTIARCH)" ""
+
+DEB_USR_CXXFLAGS :=
+DEB_USR_CFLAGS :=
+DEB_USR_CPPFLAGS :=
+DEB_USR_LDFLAGS := -Wl,--as-needed
+
+else
+
+# Link only --as-needed, leave -g and -O to EPICS build
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+export DEB_CFLAGS_STRIP = -g -O2
+export DEB_CXXFLAGS_STRIP = -g -O2
+
+# Add Debian flags to the EPICS build
+DEB_USR_CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
+DEB_USR_CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
+DEB_USR_CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
+DEB_USR_LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+
+endif
+
+ifeq "$(DEB_BUILD_ARCH)" "i386"
+EPICS_HOST_ARCH:=linux-x86
+else ifeq "$(DEB_BUILD_ARCH)" "amd64"
+EPICS_HOST_ARCH:=linux-x86_64
+else
+EPICS_HOST_ARCH:=$(shell /usr/lib/epics/startup/EpicsHostArch)
+endif
+
+instroot=$(CURDIR)/debian/epics-cagateway
+bindir=$(instroot)/usr/bin
+docdir=$(instroot)/usr/share/doc/epics-cagateway
+
+epicsroot=$(CURDIR)/debian/tmp/usr/lib/epics
+epicslibs=$(epicsroot)/lib/$(EPICS_HOST_ARCH)
+epicsbins=$(epicsroot)/bin/$(EPICS_HOST_ARCH)
+
+%:
+	dh $@ --with epics -Sepicsmake
+
+override_dh_auto_clean:
+	rm -fr configure
+	ln -sf /usr/lib/epics/extensions/configure .
+	make clean
+#	dh_auto_clean
+	rm -f configure
+	rm -rf bin include lib O.*
+
+override_dh_auto_build:
+	ln -sf /usr/lib/epics/extensions/configure .
+	dh_auto_build -- SHARED_LIBRARIES=YES STATIC_BUILD=NO \
+	USR_CFLAGS_Linux="$(DEB_USR_CFLAGS)" \
+	USR_CXXFLAGS_Linux="$(DEB_USR_CXXFLAGS)" \
+	USR_CPPFLAGS_Linux="$(DEB_USR_CPPFLAGS)" \
+	USR_LDFLAGS_Linux="$(DEB_USR_LDFLAGS)"
+
+override_dh_auto_install:
+	dh_auto_install -- SHARED_LIBRARIES=YES STATIC_BUILD=NO \
+	USR_LDFLAGS_Linux="$(DEB_USR_LDFLAGS)"
+
+override_dh_install:
+	install -d $(bindir)
+	install -m 755 -T $(epicsbins)/gateway $(bindir)/cagateway
+	rm -rf $(epicsbins)
+	dh_install
+
+override_dh_installdocs:
+	install -d $(docdir)/html
+	install -d $(CURDIR)/debian/epics-cagateway-dbg//usr/share/doc/epics-cagateway-dbg
+	cp -a docs/* $(docdir)/html
+	cp -a gateway.notes $(docdir)/changelog
+	cp -a gateway.notes $(CURDIR)/debian/epics-cagateway-dbg//usr/share/doc/epics-cagateway-dbg/changelog
+	dh_installdocs
+
+override_dh_compress:
+	dh_compress -XGATEWAY.pvlist
+
+override_dh_strip_rtems:
+	dh_strip_rtems --dbg-package=epics-cagateway-dbg

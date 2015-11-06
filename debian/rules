@@ -52,15 +52,12 @@ epicsbins=$(epicsroot)/bin/$(EPICS_HOST_ARCH)
 	dh $@ --with epics -Sepicsmake
 
 override_dh_auto_clean:
-	rm -fr configure
-	ln -sf /usr/lib/epics/extensions/configure .
-	make clean
-#	dh_auto_clean
-	rm -f configure
-	rm -rf bin include lib O.*
+	echo "EPICS_BASE=/usr/lib/epics" > configure/RELEASE.local
+	dh_auto_clean
+	rm -f configure/RELEASE.local
 
 override_dh_auto_build:
-	ln -sf /usr/lib/epics/extensions/configure .
+	echo "EPICS_BASE=/usr/lib/epics" > configure/RELEASE.local
 	dh_auto_build -- SHARED_LIBRARIES=YES STATIC_BUILD=NO \
 	USR_CFLAGS_Linux="$(DEB_USR_CFLAGS)" \
 	USR_CXXFLAGS_Linux="$(DEB_USR_CXXFLAGS)" \

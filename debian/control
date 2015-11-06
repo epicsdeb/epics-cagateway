@@ -7,8 +7,8 @@ Build-Depends: debhelper (>= 8), epics-debhelper (>= 8.10~),
                epics-pcas-dev (>= 3.14.12.3-7~),
 Standards-Version: 3.9.4
 Homepage: http://www.aps.anl.gov/epics/extensions/gateway/index.php
-Vcs-Git: https://github.com/epicsdeb/epics-base.git
-Vcs-Browser: https://github.com/epicsdeb/epics-base
+Vcs-Git: https://github.com/epicsdeb/epics-cagateway.git
+Vcs-Browser: https://github.com/epicsdeb/epics-cagateway
 
 Package: epics-cagateway
 Architecture: any

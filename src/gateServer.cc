@@ -46,6 +46,17 @@
 #undef USE_LINUX_PROC_FOR_CPU
 #endif
 
+#ifdef WIN32
+  #ifdef _WIN64
+    #define NO_OF_CPUS GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS)
+  #else
+    #define NO_OF_CPUS strtol(getenv("NUMBER_OF_PROCESSORS"),NULL,10)
+  #endif
+#else
+  // Posix
+  #define NO_OF_CPUS sysconf(_SC_NPROCESSORS_ONLN)
+#endif
+
 // DEBUG_TIMES prints a message every minute, which helps determine
 // when things happen.
 #define DEBUG_TIMES 0
@@ -1119,19 +1130,18 @@ gateServer::~gateServer(void)
 	// remove all PVs from my lists
 	gateVcData *vc,*old_vc;
 	gatePvNode *old_pv,*pv_node;
-	gatePvData *pv;
 
 	while((pv_node=pv_list.first()))
 	{
 		pv_list.remove(pv_node->getData()->name(),old_pv);
-		pv=old_pv->getData();     // KE: pv not used?
+        old_pv->getData();
 		pv_node->destroy();
 	}
 
 	while((pv_node=pv_con_list.first()))
 	{
 		pv_con_list.remove(pv_node->getData()->name(),old_pv);
-		pv=old_pv->getData();     // KE: pv not used?
+        old_pv->getData();
 		pv_node->destroy();
 	}
 
@@ -2243,11 +2253,11 @@ gateRateStatsTimer::expire(const epicsTime &curTime)
 		// Error
 		cpuFract=-1.0;
 	} else {
-		cpuFract=(delTime > 0)?timeDiff/delTime:0.0;
+        cpuFract=(delTime > 0)?timeDiff/(delTime*NO_OF_CPUS):0.0;
 	}
 #else
 	cpuFract=(delTime > 0)?(double)(ULONG_DIFF(cpuCurCount,cpuPrevCount))/
-	  delTime/CLOCKS_PER_SEC:0.0;
+      (delTime*CLOCKS_PER_SEC*NO_OF_CPUS):0.0;
 #endif
 	mrg->setStat(statCPUFract,cpuFract);
 
@@ -2255,8 +2265,8 @@ gateRateStatsTimer::expire(const epicsTime &curTime)
 	// Calculate the load using average over last minute.  Does not
 	// exist for WIN32.
 	double load[N_LOAD];
-	int nProcesses;
-	nProcesses=getloadavg(load,N_LOAD);	  
+
+    getloadavg(load,N_LOAD);
 	mrg->setStat(statLoad,load[N_LOAD-1]);
 #endif
 #endif

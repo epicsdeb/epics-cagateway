@@ -92,6 +92,15 @@ caStatus gateStatChan::write(const casCtx &ctx, const gdd &value)
 			  pStat && pStat->getName()?pStat->getName():"Unknown");
 			fflush(fp);
 		}
+#ifdef WITH_CAPUTLOG
+        if (global_resources->hasCaPutlogAddress()) {
+          global_resources->caPutLog_Send(asclient->user() ? asclient->user() : "Unknown",
+                                          asclient->host() ? asclient->host() : "Unknown",
+                                          (pStat && pStat->getName()) ? pStat->getName() : "Unknown",
+                                          (pStat) ? pStat->pvData() : NULL,
+                                          &value);
+        }
+#endif
 	}
 	
 	// Call the non-virtual-function write() in the gateStat

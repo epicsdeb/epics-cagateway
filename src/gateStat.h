@@ -78,6 +78,8 @@ public:
 	
 	void report(FILE *fp);
 
+    gdd* pvData(void) const { return value; }
+
 protected:
 	gdd *value;
 	gdd *attr;

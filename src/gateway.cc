@@ -44,6 +44,7 @@
 # include <direct.h>
 # include <process.h>
 # define WIN32_MAXSTDIO 2048
+# define strcasecmp _stricmp
 #else
 # include <sys/wait.h>
 # include <unistd.h>
@@ -102,6 +103,7 @@ void operator delete(void* x)
 //	-access file_name = access security file
 //	-command file_name = USR1 command list file
 //	-putlog file_name = putlog file
+//  -caputlog = address (IP:port) for caPutLog server
 //	-report file_name = report file
 //	-home directory = the program's home directory
 //	-connect_timeout number = clear PV connect requests every number seconds
@@ -123,6 +125,7 @@ void operator delete(void* x)
 //	process variable list file = gateway.pvlist
 //	USR1 command list file = gateway.command
 //	putlog file = gateway.putlog
+//  caputlog address = none, not used
 //	report file = gateway.report
 //	log file = gateway.log
 //	debug level = 0 (none)
@@ -166,7 +169,9 @@ void operator delete(void* x)
 #define PARM_SERVER_IGNORE_IP 25
 #define PARM_CACHE 			  26
 #define PARM_ARCHIVE		  27
-
+#ifdef WITH_CAPUTLOG
+  #define PARM_CAPUTLOG       28
+#endif
 
 #define HOME_DIR_SIZE    300
 
@@ -184,6 +189,9 @@ static char *home_directory;
 static const char *log_file=NULL;
 static const char *putlog_file=NULL;
 static const char *report_file=NULL;
+#ifdef WITH_CAPUTLOG
+static const char *caputlog_address=NULL;
+#endif
 #ifndef WIN32
 static pid_t parent_pid;
 #endif
@@ -205,6 +213,9 @@ static PARM_STUFF ptable[] = {
     { "-access",              7, PARM_ACCESS,      "file_name" },
     { "-command",             8, PARM_COMMAND,     "file_name" },
     { "-putlog",              7, PARM_PUTLOG,      "file_name" },
+#ifdef WITH_CAPUTLOG
+    { "-caputlog",            9, PARM_CAPUTLOG,    "address (ip:port)" },
+#endif
     { "-report",              7, PARM_REPORT,      "file_name" },
     { "-home",                5, PARM_HOME,        "directory" },
     { "-sip",                 4, PARM_SERVER_IP,   "IP_address" },
@@ -349,20 +360,19 @@ static int startEverything(char *prefix)
 #endif
 
 	if(client_ip_addr) {
-		int status=setEnv("EPICS_CA_ADDR_LIST",client_ip_addr,
-		  &gate_ca_list);
+        setEnv("EPICS_CA_ADDR_LIST", client_ip_addr, &gate_ca_list);
 		// In addition, make EPICS_CA_AUTO_LIST=NO to avoid sending
 		// search requests to ourself.  Note that if
 		// EPICS_CA_ADDR_LIST is specified instead of -cip, then
 		// EPICS_CA_AUTO_ADDR_LIST=NO must be set also as this branch
 		// will not be taken.
-		status=setEnv("EPICS_CA_AUTO_ADDR_LIST","NO",&gate_ca_auto_list);
+        setEnv("EPICS_CA_AUTO_ADDR_LIST", "NO", &gate_ca_auto_list);
 		/*gjansa: for beacons*/
 		char *tempBuff;
 		tempBuff = getenv("EPICS_CAS_AUTO_BEACON_ADDR_LIST");
 		if(tempBuff != NULL){
 			if(strcasecmp(tempBuff,"NO")){
-				status=setEnv("EPICS_CAS_AUTO_BEACON_ADDR_LIST","YES",&gate_beacon_ca_auto_list);
+                setEnv("EPICS_CAS_AUTO_BEACON_ADDR_LIST","YES",&gate_beacon_ca_auto_list);
 			}
 		}
 		gateDebug1(15,"gateway setting <%s>\n",gate_ca_auto_list);
@@ -423,6 +433,9 @@ static int startEverything(char *prefix)
 	fprintf(fp,"# pvlist file=<%s>\n",global_resources->listFile());
 	fprintf(fp,"# command file=<%s>\n",global_resources->commandFile());
 	fprintf(fp,"# putlog file=<%s>\n",global_resources->putlogFile());
+#ifdef WITH_CAPUTLOG
+	fprintf(fp,"# caputlog address=<%s>\n",global_resources->caputlogAddress());
+#endif
 	fprintf(fp,"# report file=<%s>\n",global_resources->reportFile());
 	fprintf(fp,"# debug level=%d\n",global_resources->debugLevel());
 	fprintf(fp,"# dead timeout=%ld\n",global_resources->deadTimeout());
@@ -621,6 +634,22 @@ static int startEverything(char *prefix)
 #if DEBUG_ENV
 	system("printenv | grep EPICS");
 	fflush(stdout); fflush(stderr);
+#endif
+    // start caPutLog in global_resources, if user defined a caPutLog ip:port address
+#ifdef WITH_CAPUTLOG
+    if (global_resources->hasCaPutlogAddress()) {
+  	  int caputlog_status = global_resources->caPutLog_Init();
+      if (caputlog_status != 0) {
+        fprintf(stderr,"%s global_resources caPutLogInit failed, aborting\n",timeStamp());
+        fflush(stdout);
+        fflush(stderr);
+        if (server) {
+          delete server;
+          server = NULL;
+        }
+        return 1;
+      }
+    }
 #endif
 
 	// Start the gateServer
@@ -834,6 +863,18 @@ int main(int argc, char** argv)
 						}
 					}
 					break;
+#ifdef WITH_CAPUTLOG
+				case PARM_CAPUTLOG:
+					if(++i>=argc) no_error=0;
+					else {
+						if(argv[i][0]=='-') no_error=0;
+						else {
+							caputlog_address=argv[i];
+							not_done=0;
+						}
+					}
+					break;
+#endif
 				case PARM_REPORT:
 					if(++i>=argc) no_error=0;
 					else {
@@ -1062,6 +1103,9 @@ int main(int argc, char** argv)
 		fprintf(stderr,"\tpvlist=%s\n",gr->listFile());
 		fprintf(stderr,"\tcommand=%s\n",gr->commandFile());
 		fprintf(stderr,"\tputlog=%s\n",gr->putlogFile());
+#ifdef WITH_CAPUTLOG
+		fprintf(stderr,"\tcaputlog=%s\n",gr->caputlogAddress());
+#endif
 		fprintf(stderr,"\treport=%s\n",gr->reportFile());
 		fprintf(stderr,"\tdead=%ld\n",gr->deadTimeout());
 		fprintf(stderr,"\tconnect=%ld\n",gr->connectTimeout());
@@ -1113,6 +1157,9 @@ int main(int argc, char** argv)
 	if(pvlist_file)			gr->setListFile(pvlist_file);
 	if(command_file)		gr->setCommandFile(command_file);
 	if(putlog_file)	    	gr->setPutlogFile(putlog_file);
+#ifdef WITH_CAPUTLOG
+	if(caputlog_address)  	gr->setCaPutlogAddress(caputlog_address);
+#endif
 	if(report_file)	    	gr->setReportFile(report_file);
 	
 	//set caching and archive mode 
@@ -1263,6 +1310,9 @@ int main(int argc, char** argv)
 		fprintf(stderr," list file = <%s>\n",gr->listFile());
 		fprintf(stderr," command file = <%s>\n",gr->commandFile());
 		fprintf(stderr," putlog file = <%s>\n",gr->putlogFile());
+#ifdef WITH_CAPUTLOG
+		fprintf(stderr," caputlog address = <%s>\n",gr->caputlogAddress());
+#endif
 		fprintf(stderr," report file = <%s>\n",gr->reportFile());
 		fprintf(stderr," debug level = %d\n",gr->debugLevel());
 		fprintf(stderr," connect timeout = %ld\n",gr->connectTimeout());

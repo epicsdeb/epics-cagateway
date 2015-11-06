@@ -105,7 +105,7 @@ public:
 	gatePvData(gateServer*,gateAsEntry*,const char* name);
 	~gatePvData(void);
 
-	typedef gdd* (gatePvData::*gateCallback)(void*);
+    typedef gdd* (gatePvData::*gateCallback)(EVENT_ARGS *);
 	
 	int active(void) const { return (pv_state==gatePvActive)?1:0; }
 	int inactive(void) const { return (pv_state==gatePvInactive)?1:0; }
@@ -205,9 +205,9 @@ private:
 	
 	void setState(gatePvState s) { pv_state=s; }
 	
-	gdd* runEventCB(void* data) { return (this->*event_func)(data); }
-	gdd* runDataCB(void* data) { return (this->*data_func)(data); }
-	gdd* runValueDataCB(void* data) { return (this->*value_data_func)(data); }
+    gdd* runEventCB(EVENT_ARGS *pArgs) { return (this->*event_func)(pArgs); }
+    gdd* runDataCB(EVENT_ARGS *pArgs) { return (this->*data_func)(pArgs); }
+    gdd* runValueDataCB(EVENT_ARGS *pArgs) { return (this->*value_data_func)(pArgs); }
 	
 	tsDLList<gateAsyncE> eio;  // pending exist test list
 	tsDLList<gatePvCallbackId> callback_list;  // callback list for puts
@@ -255,42 +255,42 @@ private:
 	casEventMask value_log_mask;	
 
 	// Callback functions used in eventCB
-	gdd* eventStringCB(void*);
-	gdd* eventEnumCB(void*);
-	gdd* eventShortCB(void*);
-	gdd* eventFloatCB(void*);
-	gdd* eventDoubleCB(void*);
-	gdd* eventCharCB(void*);
-	gdd* eventLongCB(void*);
+    gdd* eventStringCB(EVENT_ARGS *pArgs);
+    gdd* eventEnumCB(EVENT_ARGS *pArgs);
+    gdd* eventShortCB(EVENT_ARGS *pArgs);
+    gdd* eventFloatCB(EVENT_ARGS *pArgs);
+    gdd* eventDoubleCB(EVENT_ARGS *pArgs);
+    gdd* eventCharCB(EVENT_ARGS *pArgs);
+    gdd* eventLongCB(EVENT_ARGS *pArgs);
 	gdd* eventSTSAckStringCB(dbr_stsack_string*);
 
 	// Callback functions used in getCB
-	gdd* dataStringCB(void*);
-	gdd* dataEnumCB(void*);
-	gdd* dataShortCB(void*);
-	gdd* dataFloatCB(void*);
-	gdd* dataDoubleCB(void*);
-	gdd* dataCharCB(void*);
-	gdd* dataLongCB(void*);
+    gdd* dataStringCB(EVENT_ARGS *pArgs);
+    gdd* dataEnumCB(EVENT_ARGS *pArgs);
+    gdd* dataShortCB(EVENT_ARGS *pArgs);
+    gdd* dataFloatCB(EVENT_ARGS *pArgs);
+    gdd* dataDoubleCB(EVENT_ARGS *pArgs);
+    gdd* dataCharCB(EVENT_ARGS *pArgs);
+    gdd* dataLongCB(EVENT_ARGS *pArgs);
 	
 	// Callback functions used in getCB for value
-	gdd* valueDataStringCB(void*);
-	gdd* valueDataEnumCB(void*);
-	gdd* valueDataShortCB(void*);
-	gdd* valueDataFloatCB(void*);
-	gdd* valueDataDoubleCB(void*);
-	gdd* valueDataCharCB(void*);
-	gdd* valueDataLongCB(void*);	
+    gdd* valueDataStringCB(EVENT_ARGS *pArgs);
+    gdd* valueDataEnumCB(EVENT_ARGS *pArgs);
+    gdd* valueDataShortCB(EVENT_ARGS *pArgs);
+    gdd* valueDataFloatCB(EVENT_ARGS *pArgs);
+    gdd* valueDataDoubleCB(EVENT_ARGS *pArgs);
+    gdd* valueDataCharCB(EVENT_ARGS *pArgs);
+    gdd* valueDataLongCB(EVENT_ARGS *pArgs);
 
 public:
-	static void connectCB(CONNECT_ARGS args);	// connection callback
-	static void accessCB(ACCESS_ARGS args);		// access security callback
-	static void eventCB(EVENT_ARGS args);       // value-changed callback
-	static void logEventCB(EVENT_ARGS args);       // value-changed callback	
+    static void connectCB(CONNECT_ARGS args);   // connection callback
+    static void accessCB(ACCESS_ARGS args);     // access security callback
+    static void eventCB(EVENT_ARGS args);       // value-changed callback
+    static void logEventCB(EVENT_ARGS args);    // value-changed callback
     static void alhCB(EVENT_ARGS args);         // alh info value-changed callback
-	static void putCB(EVENT_ARGS args);         // put callback
-	static void getCB(EVENT_ARGS args);         // get callback
-	static void getTimeCB(EVENT_ARGS args);         // get time callback
+    static void putCB(EVENT_ARGS args);         // put callback
+    static void getCB(EVENT_ARGS args);         // get callback
+    static void getTimeCB(EVENT_ARGS args);     // get time callback
 };
 
 inline void gatePvData::addET(const casCtx& c)

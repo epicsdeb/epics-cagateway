@@ -46,7 +46,7 @@ extern "C" {
 #include "aitTypes.h"
 
 #ifdef USE_PCRE
-#include <pcre/pcre.h>
+#include <pcre.h>
 #else
 
 extern "C" {

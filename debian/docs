@@ -1,5 +1,4 @@
-README.1st
-GATEWAY.*
-gwStats.adl
-hydraStats.adl
-hydra.rate.stp
+docs/GATEWAY.*
+contrib/gwStats.adl
+contrib/hydraStats.adl
+contrib/hydra.rate.stp

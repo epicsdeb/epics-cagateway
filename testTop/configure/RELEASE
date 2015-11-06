@@ -1,0 +1,37 @@
+# RELEASE - Location of external support modules
+#
+# IF YOU CHANGE this file or any file it includes you must
+# subsequently do a "gnumake rebuild" in the application's
+# top level directory.
+#
+# The build process does not check dependencies against files
+# that are outside this application, thus you should also do a
+# "gnumake rebuild" in the top level directory after EPICS_BASE
+# or any other external module pointed to below is rebuilt.
+#
+# Host- or target-specific settings can be given in files named
+#  RELEASE.$(EPICS_HOST_ARCH).Common
+#  RELEASE.Common.$(T_A)
+#  RELEASE.$(EPICS_HOST_ARCH).$(T_A)
+
+# Attention developers: Do not edit the locations in this file!
+#
+# Create a file RELEASE.local pointing to your EPICS_BASE
+# build directory, e.g.
+#   EPICS_BASE = /home/install/epics/base
+
+# If these tests are built in a directory under CA Gateway,
+# use the following definitions:
+
+GATEWAY = $(TOP)/..
+-include $(TOP)/../../RELEASE.local
+-include $(TOP)/../configure/RELEASE.local
+
+# If you copied these tests from CA Gateway to be built as a
+# standalone TOP, define
+#   GATEWAY = /path/to/Gateway
+# in the appropriate RELEASE[.local],
+# and use the following definitions instead:
+
+#-include $(TOP)/../RELEASE.local
+#-include $(TOP)/configure/RELEASE.local

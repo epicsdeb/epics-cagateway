@@ -18,8 +18,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
 
 #ifdef WIN32
@@ -41,6 +41,12 @@
 #include <gddAppTable.h>
 #include <dbMapper.h>
 
+#ifdef WITH_CAPUTLOG
+  #include <caPutLog.h>
+  #include <caPutLogTask.h>
+  #include <caPutLogAs.h>
+#endif
+
 // Global variables
 gateResources* global_resources;
 
@@ -51,13 +57,13 @@ gateResources* global_resources;
 // should copy it to a safe place e.g. strcpy(savetime,timestamp());
 char *timeStamp(void)
 {
-	static char timeStampStr[16];
-	long now;
+	static char timeStampStr[20];
+	time_t now;
 	struct tm *tblock;
 	
 	time(&now);
 	tblock=localtime(&now);
-	strftime(timeStampStr,20,"%b %d %H:%M:%S",tblock);
+	strftime(timeStampStr,sizeof(timeStampStr),"%b %d %H:%M:%S",tblock);
 	
 	return timeStampStr;
 }
@@ -108,6 +114,159 @@ char *getComputerName(void)
 	return name;
 }
 
+#ifdef WITH_CAPUTLOG
+/*
+  We need to define these here, as caPutLog is using dbFldTypes.h defs for
+  DBR_xxx and our code is loading db_access.h defs elsewhere, and thse ARE
+  DIFFERENT.
+
+  DBR_FLOAT in db_access.h is 6, for example but in dbFldTypes.h that means a
+  DBR_ULONG.
+*/
+#define OUR_DBR_STRING   0
+#define OUR_DBR_CHAR     1
+#define OUR_DBR_UCHAR    2
+#define OUR_DBR_SHORT    3
+#define OUR_DBR_USHORT   4
+#define OUR_DBR_LONG     5
+#define OUR_DBR_ULONG    6
+#define OUR_DBR_FLOAT    7
+#define OUR_DBR_DOUBLE   8
+
+static int gddGetOurType(const gdd *gddVal)
+{
+  switch ( gddVal->primitiveType() ) {
+    case aitEnumInt8    : return(OUR_DBR_CHAR);
+    case aitEnumUint8   : return(OUR_DBR_UCHAR);
+    case aitEnumInt16   : return(OUR_DBR_SHORT);
+    case aitEnumEnum16  : return(OUR_DBR_USHORT);
+    case aitEnumUint16  : return(OUR_DBR_USHORT);
+    case aitEnumInt32   : return(OUR_DBR_LONG);
+    case aitEnumUint32  : return(OUR_DBR_ULONG);
+    case aitEnumFloat32 : return(OUR_DBR_FLOAT);
+    case aitEnumFloat64 : return(OUR_DBR_DOUBLE);
+    case aitEnumFixedString:
+    case aitEnumString:
+    default:
+      return(OUR_DBR_STRING);
+  }
+}
+
+static int gddToVALUE(const gdd *gddVal, short ourdbrtype, VALUE *valueStruct)
+{
+  memset(valueStruct,0,sizeof(VALUE));
+  switch (ourdbrtype) {
+    case OUR_DBR_CHAR: {
+          aitInt8 x;
+          gddVal->get(x);
+          valueStruct->v_char = x;
+        }
+        return(0);
+
+    case OUR_DBR_UCHAR: {
+          aitUint8 x;
+          gddVal->get(x);
+          valueStruct->v_uchar = x;
+        }
+        return(0);
+
+    case OUR_DBR_SHORT: {
+          aitInt16 x;
+          gddVal->get(x);
+          valueStruct->v_short = x;
+        }
+        return(0);
+
+    case OUR_DBR_USHORT: {
+          aitUint16 x;
+          gddVal->get(x);
+          valueStruct->v_ushort = x;
+        }
+        return(0);
+
+    case OUR_DBR_LONG: {
+          aitInt32 x;
+          gddVal->get(x);
+          valueStruct->v_long = x;
+        }
+        return(0);
+
+    case OUR_DBR_ULONG: {
+          aitUint32 x;
+          gddVal->get(x);
+          valueStruct->v_ulong = x;
+        }
+        return(0);
+
+    case OUR_DBR_FLOAT: {
+          aitFloat32 x;
+          gddVal->get(x);
+          valueStruct->v_float = x;
+        }
+        return(0);
+
+    case OUR_DBR_DOUBLE: {
+          aitFloat64 x;
+          gddVal->get(x);
+          valueStruct->v_double = x;
+        }
+        return(0);
+
+    case OUR_DBR_STRING:
+    default: {
+          aitString x;
+          gddVal->get(x);
+          int len = strlen(x);
+          int siz = sizeof(valueStruct->v_string);
+          if (len >= siz) {
+            strncpy(valueStruct->v_string,x,siz-1);
+            valueStruct->v_string[siz-1] = 0;
+          } else {
+            strcpy(valueStruct->v_string,x);
+          }
+          return(0);
+        }
+  }
+}
+
+static char *debugVALUEString(VALUE *v, int ourdbrtype, char *buffer)
+{
+  switch (ourdbrtype) {
+    case OUR_DBR_CHAR:
+      sprintf(buffer,"v_char %d",v->v_char);
+      break;
+    case OUR_DBR_UCHAR:
+      sprintf(buffer,"v_uchar %d",v->v_uchar);
+      break;
+    case OUR_DBR_SHORT:
+      sprintf(buffer,"v_short %hd",v->v_short);
+      break;
+    case OUR_DBR_USHORT:
+      sprintf(buffer,"v_ushort %hu",v->v_ushort);
+      break;
+    case OUR_DBR_LONG:
+      sprintf(buffer,"v_long %ld",v->v_long);
+      break;
+    case OUR_DBR_ULONG:
+      sprintf(buffer,"v_ulong %lu",v->v_ulong);
+      break;
+    case OUR_DBR_FLOAT:
+      sprintf(buffer,"v_float %g",v->v_float);
+      break;
+    case OUR_DBR_DOUBLE:
+      sprintf(buffer,"v_double %g",v->v_double);
+      break;
+    case OUR_DBR_STRING:
+      sprintf(buffer,"v_string '%s'",v->v_string);
+      break;
+    default:
+      sprintf(buffer,"unknown type %d",ourdbrtype);
+  }
+  return(buffer);
+}
+
+#endif // WITH_CAPUTLOG
+
 gateResources::gateResources(void)
 {
 	as = NULL;
@@ -130,6 +289,9 @@ gateResources::gateResources(void)
     
 	// Miscellaneous initializations
 	putlog_file=NULL;
+#ifdef WITH_CAPUTLOG
+    caputlog_address=NULL;
+#endif
 	putlogFp=NULL;
 	report_file=strDup(GATE_REPORT_FILE);
     debug_level=0;
@@ -168,6 +330,10 @@ gateResources::~gateResources(void)
 	if(command_file) delete [] command_file;
 	if(putlog_file) delete [] putlog_file;
 	if(report_file) delete [] report_file;
+#ifdef WITH_CAPUTLOG
+    caPutLog_Term();
+	if (caputlog_address) delete [] caputlog_address;
+#endif
 }
 
 int gateResources::appValue=0;
@@ -206,6 +372,62 @@ int gateResources::setPutlogFile(const char* file)
 	putlog_file=strDup(file);
 	return 0;
 }
+
+#ifdef WITH_CAPUTLOG
+int gateResources::setCaPutlogAddress(const char* address)
+{
+	if (caputlog_address) {
+      delete [] caputlog_address;
+    }
+	caputlog_address = strDup(address);
+    return 0;
+}
+
+int gateResources::caPutLog_Init(void)
+{
+  if (caputlog_address) {
+    return caPutLogInit(caputlog_address,caPutLogAll);
+  }
+  return 1;
+}
+
+void gateResources::caPutLog_Term(void)
+{
+  caPutLogTaskStop();
+}
+
+void gateResources::caPutLog_Send
+     (const char *user,
+      const char *host,
+      const char *pvname,
+      const gdd *old_value,
+      const gdd *new_value)
+{
+  if ((! new_value) || (new_value->primitiveType() == aitEnumInvalid)) return;
+
+  // get memory for a LOGDATA item from caPutLog's free list
+  LOGDATA *pdata = caPutLogDataCalloc();
+  if (pdata == NULL) {
+    errlogPrintf("gateResources::caPutLogSend: memory allocation failed\n");
+    return;
+  }
+  strcpy(pdata->userid,user);
+  strcpy(pdata->hostid,host);
+  strcpy(pdata->pv_name,pvname);
+  pdata->pfield = (void *) pvname;
+  pdata->type = gddGetOurType(new_value);
+  gddToVALUE(new_value,pdata->type,&pdata->new_value.value);
+  new_value->getTimeStamp(&pdata->new_value.time);
+  if ((old_value) && (old_value->primitiveType() != aitEnumInvalid) && (gddGetOurType(old_value) == pdata->type)) {
+    gddToVALUE(old_value,pdata->type,&pdata->old_value);
+  } else {
+    // if no usable old_value provided, fill in data.old_value with copy of new value
+    // as there's no way to flag a VALUE struct as invalid
+    memcpy(&pdata->old_value,&pdata->new_value.value,sizeof(VALUE));
+  }
+  caPutLogTaskSend(pdata);
+}
+#endif // WITH_CAPUTLOG
 
 int gateResources::setReportFile(const char* file)
 {

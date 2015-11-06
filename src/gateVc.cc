@@ -244,6 +244,15 @@ caStatus gateVcChan::write(const casCtx &ctx, const gdd &value)
 			  vc && vc->getName()?vc->getName():"Unknown");
 			fflush(fp);
 		}
+#ifdef WITH_CAPUTLOG
+        if (global_resources->hasCaPutlogAddress()) {
+          global_resources->caPutLog_Send(user ? user : "Unknown",
+                                          host ? host : "Unknown",
+                                          (vc && vc->getName()) ? vc->getName() : "Unknown",
+                                          (vc) ? vc->eventData() : NULL,
+                                          &value);
+        }
+#endif
 	}
 	
 	// Call the non-virtual-function write() in the gateVcData
@@ -271,6 +280,15 @@ caStatus gateVcChan::writeNotify(const casCtx &ctx, const gdd &value)
 			  vc && vc->getName()?vc->getName():"Unknown");
 			fflush(fp);
 		}
+#ifdef WITH_CAPUTLOG
+        if (global_resources->hasCaPutlogAddress()) {
+          global_resources->caPutLog_Send(user ? user : "Unknown",
+                                          host ? host : "Unknown",
+                                          (vc && vc->getName()) ? vc->getName() : "Unknown",
+                                          (vc) ? vc->eventData() : NULL,
+                                          &value);
+        }
+#endif
 	}
 	
 	// Call the non-virtual-function write() in the gateVcData

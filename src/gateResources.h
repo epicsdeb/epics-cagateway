@@ -49,6 +49,7 @@
 #endif
 
 #include "cadef.h"
+#include "gdd.h"
 
 #include "gateVersion.h"
 
@@ -132,6 +133,19 @@ public:
 	gateAs* getAs(void);
 	bool isAsSetUp(void) const { return as?true:false; }
 
+#ifdef WITH_CAPUTLOG
+	int setCaPutlogAddress(const char* address);
+	const char* caputlogAddress(void) const	{ return caputlog_address?caputlog_address:"NULL"; }
+    int hasCaPutlogAddress(void) const { return caputlog_address?1:0; }
+	int caPutLog_Init(void);
+    void caPutLog_Send(const char *user,
+                       const char *host,
+                       const char *pvname,
+                       const gdd *old_value,
+                       const gdd *new_value);
+	void caPutLog_Term(void);
+#endif
+
 	// here for convenience
 	static int appValue;
 	static int appEnum;
@@ -144,6 +158,9 @@ public:
 
 private:
 	char *access_file, *pvlist_file, *command_file, *putlog_file, *report_file;
+#ifdef WITH_CAPUTLOG
+    char *caputlog_address;
+#endif
 	int debug_level, ro;
 	bool serverMode;
 	bool cacheMode;

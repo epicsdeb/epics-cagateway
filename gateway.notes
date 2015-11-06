@@ -109,3 +109,20 @@ Wed Aug 26 09:45:19 CDT 2009
 
 Thu Sep 17 10:22:51 CDT 2009   Gateway2-0-4-0
 	Modified release number and tagged files.
+
+Wed Dec  3 15:55:24 CET 2014   Gateway2-0-5-0   Ralph Lange
+    Intermediate release.
+    Merged FRIB branch that adds proper CAPutLog logging.
+    Supports building against EPICS Base 3.15.1.
+    Windows build has been broken for a long time - without complaints.
+
+Tue Dec  9 16:46:24 CET 2014   Gateway2-0-5-1   Ralph Lange
+    Minor fix release.
+    Reenabled Windows builds MSVC 32 and 64, MinGW 32 (EPICS 3.15 only).
+    Support for PCRE version 3 (API changes).
+
+Fri Jan 30 16:25:29 CET 2015   Gateway2-0-6-0   Ralph Lange
+    Changes source structure to be a standard EPICS module.
+    Add Jenkins job for CloudBees CI.
+    Fix crashes when forwarding empty arrays (bug lp:1415938).
+    Use variable length arrays for CAC (IOC side) subscriptions.

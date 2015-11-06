@@ -19,20 +19,20 @@
  * Descr.:     Gateway Version Information
  *
  * Author(s):  J. Kowalkowski, J. Anderson, K. Evans (APS)
- *             R. Lange (BESSY), Gasper Jansa (cosylab),
-               Dirk Zimoch (PSI)
+ *             R. Lange (ITER), Gasper Jansa (cosylab),
+ *             Dirk Zimoch (PSI)
  *
  *********************************************************************-*/
 
 #define GATEWAY_VERSION       2
 #define GATEWAY_REVISION      0
-#define GATEWAY_MODIFICATION  4
+#define GATEWAY_MODIFICATION  6
 #define GATEWAY_UPDATE_LEVEL  0
 
-#define GATEWAY_VERSION_STRING "PV Gateway Version 2.0.4.0"
+#define GATEWAY_VERSION_STRING "PV Gateway Version 2.0.6.0"
 
 #define GATEWAY_CREDITS_STRING  \
-          "Developed at Argonne National Laboratory and BESSY\n\n" \
+          "Originally developed at Argonne National Laboratory and BESSY\n\n" \
           "Authors: Jim Kowalkowski, Janet Anderson, Kenneth Evans, Jr. (APS),\n" \
-          "   Ralph Lange (BESSY), Gasper Jansa (cosylab), and Dirk Zimoch (PSI)\n\n"
+          "   Ralph Lange (ITER), Gasper Jansa (cosylab), and Dirk Zimoch (PSI)\n\n"
 #endif

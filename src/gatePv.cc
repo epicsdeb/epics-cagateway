@@ -972,8 +972,7 @@ int gatePvData::get(readType read_type)
 						gateDebug0(3,"gatePvData::get() doing ca_array_get_callback of type CTRL\n");
 						setTransTime();
 						markCtrlGetPending();				
-						rc=ca_array_get_callback(dataType(),totalElements(),
-							chID,::getCB,this);
+                        rc = ca_array_get_callback(dataType(), 0, chID, ::getCB, this);
 						if(rc != ECA_NORMAL) {
 							fprintf(stderr,"%s gatePvData::get: ca_array_get_callback "
 							  "failed for %s:\n"
@@ -982,9 +981,9 @@ int gatePvData::get(readType read_type)
 						}
 					}else
 					{
-					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+                      fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
 					  	"for %s.\n"
-					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
+                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %zu\n",
 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
 					}	
 				}				
@@ -997,8 +996,7 @@ int gatePvData::get(readType read_type)
 						gateDebug0(3,"gatePvData::get() doing ca_array_get_callback of type TIME\n");
 						setTransTime();
 						markTimeGetPending();	
-						rc=ca_array_get_callback(eventType(),totalElements(),
-							chID,::getTimeCB,this);
+                        rc = ca_array_get_callback(eventType(), 0, chID, ::getTimeCB, this);
 						if(rc != ECA_NORMAL) {
 							fprintf(stderr,"%s gatePvData::get: ca_array_get_callback for DBR_TIME "
 							  "failed for %s:\n"
@@ -1007,9 +1005,9 @@ int gatePvData::get(readType read_type)
 						}
 					}else
 					{
-					  fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES to small "
+                      fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
 					  	"for %s.\n"
-					  	"Set EPICS_CA_MAX_ARRAY_BYTES to at least %u\n",
+                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %zu\n",
 					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
 					}
 				}						
@@ -1407,8 +1405,8 @@ void gatePvData::putCB(EVENT_ARGS args)
 void gatePvData::eventCB(EVENT_ARGS args)
 {
 	gatePvData* pv=(gatePvData*)ca_puser(args.chid);
-	gateDebug2(5,"gatePvData::eventCB(gatePvData=%p) type=%d\n",
-	  (void *)pv, (unsigned int)args.type);
+    gateDebug3(5,"gatePvData::eventCB(gatePvData=%p) type=%d, count=%lu\n",
+      (void *)pv, (unsigned int)args.type, args.count);
 	gdd* dd;
 	readType read_type = timeType;
 	int stat_sevr_changed = 1;
@@ -1436,7 +1434,8 @@ void gatePvData::eventCB(EVENT_ARGS args)
 		if(pv->active())
 		{
 			gateDebug1(5,"gatePvData::eventCB() %s PV\n",pv->getStateName());
-			if((dd=pv->runEventCB((void *)(args.dbr))))
+            dd = pv->runEventCB(&args);
+            if (dd)
 			{
 #if DEBUG_BEAM
 				printf("  dd=%p needAddRemove=%d\n",
@@ -1512,7 +1511,8 @@ void gatePvData::logEventCB(EVENT_ARGS args)
 		if(pv->active())
 		{
 			gateDebug1(5,"gatePvData::LogEventCB() %s PV\n",pv->getStateName());
-			if((dd=pv->runEventCB((void *)(args.dbr))))
+            dd = pv->runEventCB(&args);
+            if (dd)
 			{
 #if DEBUG_BEAM
 				printf("  dd=%p needAddRemove=%d\n",
@@ -1623,11 +1623,15 @@ void gatePvData::getCB(EVENT_ARGS args)
 		if(pv->active())
 		{
 			gateDebug1(5,"gatePvData::getCB() %s PV\n",pv->getStateName());
-			if((dd=pv->runDataCB((void *)(args.dbr)))) pv->vc->setPvData(dd);
+            dd = pv->runDataCB(&args);
+            if (dd)
+                pv->vc->setPvData(dd);
 			
 			if(!global_resources->getCacheMode()) //we must set also value if only ctrl was requested from client
 			{
-				if((dd=pv->runValueDataCB((void *)(args.dbr)))) pv->vc->setEventData(dd);
+                dd = pv->runValueDataCB(&args);
+                if (dd)
+                    pv->vc->setEventData(dd);
 				
 				if(pv->needAddRemove() && !pv->vc->needPosting())
 				{
@@ -1726,7 +1730,9 @@ void gatePvData::getTimeCB(EVENT_ARGS args)
 		if(pv->active())
 		{
 			gateDebug1(5,"gatePvData::getTimeCB() %s PV\n",pv->getStateName());
-			if((dd=pv->runEventCB((void *)(args.dbr)))) pv->vc->setEventData(dd);
+            dd = pv->runEventCB(&args);
+            if (dd)
+                pv->vc->setEventData(dd);
 			
 			/* flush async get request */
 			if(pv->needAddRemove() && !pv->vc->needPosting())
@@ -1757,6 +1763,7 @@ void gatePvData::accessCB(ACCESS_ARGS args)
 {
 	gatePvData* pv=(gatePvData*)ca_puser(args.chid);
 	gateVcData* vc=pv->VC();
+    gateDebug1(5,"gatePvData::accessCB(gatePvData=%p)\n",(void *)pv);
 
 #ifdef RATE_STATS
 	++pv->mrg->client_event_count;
@@ -1796,18 +1803,18 @@ void gatePvData::accessCB(ACCESS_ARGS args)
 //  DBR_CTRL_LONG
 //  DBR_CTRL_SHORT (DBR_CTRL_INT)
 
-gdd* gatePvData::dataStringCB(void * /*dbr*/)
+gdd* gatePvData::dataStringCB(EVENT_ARGS * /*pArgs*/)
 {
 	gateDebug0(4,"gatePvData::dataStringCB\n");
 	// no useful pv_data returned by this function
 	return NULL;
 }
 
-gdd* gatePvData::dataEnumCB(void * dbr)
+gdd* gatePvData::dataEnumCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(4,"gatePvData::dataEnumCB\n");
 	int i;
-	dbr_ctrl_enum* ts = (dbr_ctrl_enum*)dbr;
+    dbr_ctrl_enum* ts = (dbr_ctrl_enum*)pArgs->dbr;
 	aitFixedString* items = new aitFixedString[ts->no_str];
 	gddAtomic* menu=new gddAtomic(GR->appEnum,aitEnumFixedString,1,ts->no_str);
 
@@ -1831,10 +1838,10 @@ gdd* gatePvData::dataEnumCB(void * dbr)
 	return menu;
 }
 
-gdd* gatePvData::dataDoubleCB(void * dbr)
+gdd* gatePvData::dataDoubleCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::dataDoubleCB\n");
-	dbr_ctrl_double* ts = (dbr_ctrl_double*)dbr;
+    dbr_ctrl_double* ts = (dbr_ctrl_double*)pArgs->dbr;
 	gdd* attr = GETDD(appAttributes);
 
 	// DBR_CTRL_DOUBLE response
@@ -1852,10 +1859,10 @@ gdd* gatePvData::dataDoubleCB(void * dbr)
 	return attr;
 }
 
-gdd* gatePvData::dataShortCB(void *dbr)
+gdd* gatePvData::dataShortCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::dataShortCB\n");
-	dbr_ctrl_short* ts = (dbr_ctrl_short*)dbr;
+    dbr_ctrl_short* ts = (dbr_ctrl_short*)pArgs->dbr;
 	gdd* attr = GETDD(appAttributes);
 
 	// DBR_CTRL_SHORT DBT_CTRL_INT response
@@ -1873,10 +1880,10 @@ gdd* gatePvData::dataShortCB(void *dbr)
 	return attr;
 }
 
-gdd* gatePvData::dataFloatCB(void *dbr)
+gdd* gatePvData::dataFloatCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::dataFloatCB\n");
-	dbr_ctrl_float* ts = (dbr_ctrl_float*)dbr;
+    dbr_ctrl_float* ts = (dbr_ctrl_float*)pArgs->dbr;
 	gdd* attr = GETDD(appAttributes);
 
 	// DBR_CTRL_FLOAT response
@@ -1894,10 +1901,10 @@ gdd* gatePvData::dataFloatCB(void *dbr)
 	return attr;
 }
 
-gdd* gatePvData::dataCharCB(void *dbr)
+gdd* gatePvData::dataCharCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::dataCharCB\n");
-	dbr_ctrl_char* ts = (dbr_ctrl_char*)dbr;
+    dbr_ctrl_char* ts = (dbr_ctrl_char*)pArgs->dbr;
 	gdd* attr = GETDD(appAttributes);
 
 	// DBR_CTRL_CHAR response
@@ -1915,10 +1922,10 @@ gdd* gatePvData::dataCharCB(void *dbr)
 	return attr;
 }
 
-gdd* gatePvData::dataLongCB(void *dbr)
+gdd* gatePvData::dataLongCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::dataLongCB\n");
-	dbr_ctrl_long* ts = (dbr_ctrl_long*)dbr;
+    dbr_ctrl_long* ts = (dbr_ctrl_long*)pArgs->dbr;
 	gdd* attr = GETDD(appAttributes);
 
 	// DBR_CTRL_LONG response
@@ -1946,27 +1953,29 @@ gdd* gatePvData::dataLongCB(void *dbr)
 //  DBR_TIME_SHORT (DBR_TIME_INT)
 //  DBR_STSACK_STRING (alarm info)
 
-gdd* gatePvData::eventStringCB(void *dbr)
+gdd* gatePvData::eventStringCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventStringCB\n");
-	dbr_time_string* ts = (dbr_time_string*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_string* ts = (dbr_time_string*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 
 	// DBR_TIME_STRING response
-	if(count>1)
+    if (maxCount > 1)
 	{
 		// KE: For arrays of strings.  This case was not originally
 		// included and was added 11-2004.  It uses aitFixedString
 		// whereas the count=1 case uses aitString, which is a class.
 		// It is not commonly used, so if this implementation is
 		// wrong, it may be awhile before it is discovered.
-		aitFixedString *d,*nd;
-		nd=new aitFixedString[count];
+        aitIndex count = pArgs->count;
+        aitFixedString *d, *nd;
+        nd = new aitFixedString[maxCount];
 		d=(aitFixedString*)&ts->value;
-		memcpy(nd,d,count*sizeof(aitFixedString));
-		value=new gddAtomic(GR->appValue,aitEnumFixedString,1,&count);
+        memset(nd, 0, maxCount * sizeof(aitFixedString));
+        memcpy(nd, d, count * sizeof(aitFixedString));
+        value = new gddAtomic(GR->appValue, aitEnumFixedString, 1, &count);
 		value->putRef(nd,new gateFixedStringDestruct());
 	}
 	else
@@ -1980,11 +1989,11 @@ gdd* gatePvData::eventStringCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventEnumCB(void *dbr)
+gdd* gatePvData::eventEnumCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventEnumCB\n");
-	dbr_time_enum* ts = (dbr_time_enum*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_enum* ts = (dbr_time_enum*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 #if DEBUG_ENUM
@@ -1992,7 +2001,7 @@ gdd* gatePvData::eventEnumCB(void *dbr)
 #endif
 
 	// DBR_TIME_ENUM response
-	if(count>1)
+    if (maxCount > 1)
 	{
 		// KE: For arrays of enums.  This case was not originally
 		// included and was added 11-2004.  It is not commonly, if
@@ -2002,11 +2011,13 @@ gdd* gatePvData::eventEnumCB(void *dbr)
 		// the menu strings, so this is an unwise thing to do.  Note
 		// that the menu strings (which don't exist for the waveform)
 		// are added in dataEnumCB.
-		aitEnum16 *d,*nd;
-		nd=new aitEnum16[count];
-		d=(aitEnum16*)&ts->value;
-		memcpy(nd,d,count*sizeof(aitEnum16));
-		value=new gddAtomic(GR->appValue,aitEnumInt16,1,&count);
+        aitIndex count = pArgs->count;
+        aitEnum16 *d, *nd;
+        nd = new aitEnum16[maxCount];
+        d = (aitEnum16*)&ts->value;
+        memset(nd, 0, maxCount * sizeof(aitEnum16));
+        memcpy(nd, d, count * sizeof(aitEnum16));
+        value = new gddAtomic(GR->appValue, aitEnumInt16, 1, &count);
 		value->putRef(nd,new gateEnumDestruct());
 	}
 	else
@@ -2023,22 +2034,24 @@ gdd* gatePvData::eventEnumCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventLongCB(void *dbr)
+gdd* gatePvData::eventLongCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventLongCB\n");
-	dbr_time_long* ts = (dbr_time_long*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_long* ts = (dbr_time_long*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_LONG response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt32 *d,*nd;
-		nd=new aitInt32[count];
-		d=(aitInt32*)&ts->value;
-		memcpy(nd,d,count*sizeof(aitInt32));
-		value=new gddAtomic(GR->appValue,aitEnumInt32,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt32 *d, *nd;
+        nd = new aitInt32[maxCount];
+        d = (aitInt32*)&ts->value;
+        memset(nd, 0, maxCount * sizeof(aitInt32));
+        memcpy(nd, d, count * sizeof(aitInt32));
+        value = new gddAtomic(GR->appValue, aitEnumInt32, 1, &count);
 		value->putRef(nd,new gateIntDestruct());
 	}
 	else
@@ -2051,22 +2064,24 @@ gdd* gatePvData::eventLongCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventCharCB(void *dbr)
+gdd* gatePvData::eventCharCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventCharCB\n");
-	dbr_time_char* ts = (dbr_time_char*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_char* ts = (dbr_time_char*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_CHAR response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt8 *d,*nd;
-		nd=new aitInt8[count];
-		d=(aitInt8*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitInt8));
-		value = new gddAtomic(GR->appValue,aitEnumInt8,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt8 *d, *nd;
+        nd = new aitInt8[maxCount];
+        d = (aitInt8*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitInt8));
+        memcpy(nd, d, count * sizeof(aitInt8));
+        value = new gddAtomic(GR->appValue, aitEnumInt8, 1, &count);
 		value->putRef(nd,new gateCharDestruct());
 	}
 	else
@@ -2079,22 +2094,24 @@ gdd* gatePvData::eventCharCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventFloatCB(void *dbr)
+gdd* gatePvData::eventFloatCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventFloatCB\n");
-	dbr_time_float* ts = (dbr_time_float*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_float* ts = (dbr_time_float*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_FLOAT response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitFloat32 *d,*nd;
-		nd=new aitFloat32[count];
-		d=(aitFloat32*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitFloat32));
-		value= new gddAtomic(GR->appValue,aitEnumFloat32,1,&count);
+        aitIndex count = pArgs->count;
+        aitFloat32 *d, *nd;
+        nd = new aitFloat32[maxCount];
+        d = (aitFloat32*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitFloat32));
+        memcpy(nd, d, count * sizeof(aitFloat32));
+        value = new gddAtomic(GR->appValue, aitEnumFloat32, 1, &count);
 		value->putRef(nd,new gateFloatDestruct());
 	}
 	else
@@ -2107,22 +2124,24 @@ gdd* gatePvData::eventFloatCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventDoubleCB(void *dbr)
+gdd* gatePvData::eventDoubleCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventDoubleCB\n");
-	dbr_time_double* ts = (dbr_time_double*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_double* ts = (dbr_time_double*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_FLOAT response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitFloat64 *d,*nd;
-		nd=new aitFloat64[count];
-		d=(aitFloat64*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitFloat64));
-		value= new gddAtomic(GR->appValue,aitEnumFloat64,1,&count);
+        aitIndex count = pArgs->count;
+        aitFloat64 *d, *nd;
+        nd = new aitFloat64[maxCount];
+        d = (aitFloat64*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitFloat64));
+        memcpy(nd, d, count * sizeof(aitFloat64));
+        value = new gddAtomic(GR->appValue, aitEnumFloat64, 1, &count);
 		value->putRef(nd,new gateDoubleDestruct());
 	}
 	else
@@ -2135,22 +2154,24 @@ gdd* gatePvData::eventDoubleCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::eventShortCB(void *dbr)
+gdd* gatePvData::eventShortCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::eventShortCB\n");
-	dbr_time_short* ts = (dbr_time_short*)dbr;
-	aitIndex count = totalElements();
+    dbr_time_short* ts = (dbr_time_short*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_FLOAT response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt16 *d,*nd;
-		nd=new aitInt16[count];
-		d=(aitInt16*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitInt16));
-		value=new gddAtomic(GR->appValue,aitEnumInt16,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt16 *d, *nd;
+        nd = new aitInt16[maxCount];
+        d = (aitInt16*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitInt16));
+        memcpy(nd, d, count * sizeof(aitInt16));
+        value = new gddAtomic(GR->appValue, aitEnumInt16, 1, &count);
 		value->putRef(nd,new gateShortDestruct);
 	}
 	else
@@ -2185,11 +2206,11 @@ gdd* gatePvData::eventSTSAckStringCB(dbr_stsack_string *ts)
 
 // one function for each of the different value type :
 
-gdd* gatePvData::valueDataEnumCB(void *dbr)
+gdd* gatePvData::valueDataEnumCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataEnumCB\n");
-	dbr_ctrl_enum* ts = (dbr_ctrl_enum*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_enum* ts = (dbr_ctrl_enum*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 #if DEBUG_ENUM
@@ -2197,7 +2218,7 @@ gdd* gatePvData::valueDataEnumCB(void *dbr)
 #endif
 
 	// DBR_CTRL_ENUM response
-	if(count>1)
+    if (maxCount > 1)
 	{
 		// KE: For arrays of enums.  This case was not originally
 		// included and was added 11-2004.  It is not commonly, if
@@ -2207,11 +2228,13 @@ gdd* gatePvData::valueDataEnumCB(void *dbr)
 		// the menu strings, so this is an unwise thing to do.  Note
 		// that the menu strings (which don't exist for the waveform)
 		// are added in dataEnumCB.
-		aitEnum16 *d,*nd;
-		nd=new aitEnum16[count];
-		d=(aitEnum16*)&ts->value;
-		memcpy(nd,d,count*sizeof(aitEnum16));
-		value=new gddAtomic(GR->appValue,aitEnumInt16,1,&count);
+        aitIndex count = pArgs->count;
+        aitEnum16 *d, *nd;
+        nd = new aitEnum16[maxCount];
+        d = (aitEnum16*)&ts->value;
+        memset(nd, 0, maxCount * sizeof(aitEnum16));
+        memcpy(nd, d, count * sizeof(aitEnum16));
+        value = new gddAtomic(GR->appValue, aitEnumInt16, 1, &count);
 		value->putRef(nd,new gateEnumDestruct());
 	}
 	else
@@ -2227,22 +2250,24 @@ gdd* gatePvData::valueDataEnumCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::valueDataLongCB(void *dbr)
+gdd* gatePvData::valueDataLongCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataLongCB\n");
-	dbr_ctrl_long* ts = (dbr_ctrl_long*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_long* ts = (dbr_ctrl_long*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_CTRL_LONG response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt32 *d,*nd;
-		nd=new aitInt32[count];
-		d=(aitInt32*)&ts->value;
-		memcpy(nd,d,count*sizeof(aitInt32));
-		value=new gddAtomic(GR->appValue,aitEnumInt32,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt32 *d, *nd;
+        nd = new aitInt32[maxCount];
+        d = (aitInt32*)&ts->value;
+        memset(nd, 0, maxCount * sizeof(aitInt32));
+        memcpy(nd, d, count * sizeof(aitInt32));
+        value = new gddAtomic(GR->appValue, aitEnumInt32, 1, &count);
 		value->putRef(nd,new gateIntDestruct());
 	}
 	else
@@ -2254,22 +2279,24 @@ gdd* gatePvData::valueDataLongCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::valueDataCharCB(void *dbr)
+gdd* gatePvData::valueDataCharCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataCharCB\n");
-	dbr_ctrl_char* ts = (dbr_ctrl_char*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_char* ts = (dbr_ctrl_char*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_CTRL_CHAR response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt8 *d,*nd;
-		nd=new aitInt8[count];
-		d=(aitInt8*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitInt8));
-		value = new gddAtomic(GR->appValue,aitEnumInt8,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt8 *d, *nd;
+        nd = new aitInt8[maxCount];
+        d = (aitInt8*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitInt8));
+        memcpy(nd, d, count * sizeof(aitInt8));
+        value = new gddAtomic(GR->appValue, aitEnumInt8, 1, &count);
 		value->putRef(nd,new gateCharDestruct());
 	}
 	else
@@ -2281,22 +2308,24 @@ gdd* gatePvData::valueDataCharCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::valueDataFloatCB(void *dbr)
+gdd* gatePvData::valueDataFloatCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataFloatCB\n");
-	dbr_ctrl_float* ts = (dbr_ctrl_float*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_float* ts = (dbr_ctrl_float*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_TIME_FLOAT response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitFloat32 *d,*nd;
-		nd=new aitFloat32[count];
-		d=(aitFloat32*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitFloat32));
-		value= new gddAtomic(GR->appValue,aitEnumFloat32,1,&count);
+        aitIndex count = pArgs->count;
+        aitFloat32 *d, *nd;
+        nd = new aitFloat32[maxCount];
+        d = (aitFloat32*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitFloat32));
+        memcpy(nd, d, count * sizeof(aitFloat32));
+        value = new gddAtomic(GR->appValue, aitEnumFloat32, 1, &count);
 		value->putRef(nd,new gateFloatDestruct());
 	}
 	else
@@ -2308,22 +2337,24 @@ gdd* gatePvData::valueDataFloatCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::valueDataDoubleCB(void *dbr)
+gdd* gatePvData::valueDataDoubleCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataDoubleCB\n");
-	dbr_ctrl_double* ts = (dbr_ctrl_double*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_double* ts = (dbr_ctrl_double*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_CTRL_DOUBLE response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitFloat64 *d,*nd;
-		nd=new aitFloat64[count];
-		d=(aitFloat64*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitFloat64));
-		value= new gddAtomic(GR->appValue,aitEnumFloat64,1,&count);
+        aitIndex count = pArgs->count;
+        aitFloat64 *d,*nd;
+        nd = new aitFloat64[maxCount];
+        d = (aitFloat64*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitFloat64));
+        memcpy(nd, d, count * sizeof(aitFloat64));
+        value = new gddAtomic(GR->appValue, aitEnumFloat64, 1, &count);
 		value->putRef(nd,new gateDoubleDestruct());
 	}
 	else
@@ -2335,22 +2366,24 @@ gdd* gatePvData::valueDataDoubleCB(void *dbr)
 	return value;
 }
 
-gdd* gatePvData::valueDataShortCB(void *dbr)
+gdd* gatePvData::valueDataShortCB(EVENT_ARGS * pArgs)
 {
 	gateDebug0(10,"gatePvData::valueDataShortCB\n");
-	dbr_ctrl_short* ts = (dbr_ctrl_short*)dbr;
-	aitIndex count = totalElements();
+    dbr_ctrl_short* ts = (dbr_ctrl_short*)pArgs->dbr;
+    aitIndex maxCount = totalElements();
 	gdd* value;
 
 	// DBR_CTRL_FLOAT response
 	// set up the value
-	if(count>1)
+    if (maxCount > 1)
 	{
-		aitInt16 *d,*nd;
-		nd=new aitInt16[count];
-		d=(aitInt16*)&(ts->value);
-		memcpy(nd,d,count*sizeof(aitInt16));
-		value=new gddAtomic(GR->appValue,aitEnumInt16,1,&count);
+        aitIndex count = pArgs->count;
+        aitInt16 *d, *nd;
+        nd = new aitInt16[maxCount];
+        d = (aitInt16*)&(ts->value);
+        memset(nd, 0, maxCount * sizeof(aitInt16));
+        memcpy(nd, d, count * sizeof(aitInt16));
+        value = new gddAtomic(GR->appValue, aitEnumInt16, 1, &count);
 		value->putRef(nd,new gateShortDestruct);
 	}
 	else
@@ -2369,5 +2402,3 @@ gdd* gatePvData::valueDataShortCB(void *dbr)
 /* c-comment-only-line-offset: 0 */
 /* c-file-offsets: ((substatement-open . 0) (label . 0)) */
 /* End: */
-
-

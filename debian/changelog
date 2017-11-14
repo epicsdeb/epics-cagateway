@@ -1,3 +1,9 @@
+epics-cagateway (2.0.6.0-2) UNRELEASED; urgency=medium
+
+  * Add cagateway-ssh helper script for use with ssh port forwarding
+
+ -- mdavidsaver <mdavidsaver@gmail.com>  Thu, 29 Sep 2016 18:57:08 -0400
+
 epics-cagateway (2.0.6.0-1) unstable; urgency=medium
 
   * Imported Upstream version 2.0.6.0

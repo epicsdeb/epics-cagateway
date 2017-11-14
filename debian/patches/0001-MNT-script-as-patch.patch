@@ -1,0 +1,67 @@
+From 15540cbf66125dd0fa5c07b1644a53da705db816 Mon Sep 17 00:00:00 2001
+From: Daron Chabot <chabot@frib.msu.edu>
+Date: Tue, 14 Nov 2017 11:20:31 -0500
+Subject: [PATCH] MNT: script as patch
+
+---
+ cagateway-ssh | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+ create mode 100755 cagateway-ssh
+
+diff --git a/cagateway-ssh b/cagateway-ssh
+new file mode 100755
+index 0000000..f622cfc
+--- /dev/null
++++ b/cagateway-ssh
+@@ -0,0 +1,48 @@
++#!/bin/sh
++set -e -x
++#
++# cagateway-ssh
++# cagateway-ssh $CAPORT
++# cagateway-ssh $CAPORT $GWPORT
++#
++# Run cagateway for use with SSH port forwarding
++#   $ ssh -L 5064:localhost:5064 iochost
++# or
++#   $ ssh -L 5064:iochost:5064 sshgw
++#
++# For non-stanard CA port eg. 15064
++#  -L 5064:localhost:15064
++
++# The local port which is being forwarded
++CAPORT=${1:-5064}
++# local TCP port where GW will listen (can't be the same as $CAPORT)
++GWPORT=${2:-${RANDOM}}
++
++WORK=`mktemp -d`
++
++trap "rm -rf $WORK" INT TERM QUIT EXIT
++
++cd "$WORK"
++
++# Allow all access
++cat << EOF > access
++ASG(DEFAULT) {
++  RULE(1,WRITE)
++}
++EOF
++
++# Allow all PVs
++cat << EOF > pvlist
++EVALUATION ORDER ALLOW, DENY
++.* ALLOW
++EOF
++
++# cagateway TCP port
++export EPICS_CAS_SERVER_PORT=$GWPORT
++
++# Lookup only through SSH and localhost UDP
++export EPICS_CA_NAME_SERVERS=localhost:$CAPORT
++export EPICS_CA_ADDR_LIST=localhost
++export EPICS_CA_AUTO_ADDR_LIST=NO
++
++cagateway -pvlist pvlist -access access
+-- 
+2.1.4
+

@@ -1,0 +1,15 @@
+bin/
+include/
+lib/
+db/
+dbd/
+configure/*.local
+html/
+**/O.*
+envPaths
+QtC-*
+*.orig
+
+# Gateway generated scriptlets
+gateway.killer
+gateway.restart

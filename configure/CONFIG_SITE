@@ -8,6 +8,79 @@
 #   CONFIG_SITE.Common.$(T_A)
 #   CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
 
+#######################################################################
+# CA Gateway specific settings
+#######################################################################
+
+# Use Perl compatible regular expressions (PCRE) instead of basic regex
+#USE_PCRE=YES
+
+# For PCRE on Linux
+#    requires package pcre-devel (or libpcre3-dev) for compiling
+#    requires package pcre (or libpcre3) for running the Gateway
+
+ifeq ($(OS_CLASS),WIN32)
+
+    # For PCRE on Windows
+    #    install libraries and includes from
+    #    https://sourceforge.net/projects/gnuwin32/files/pcre/7.0/pcre-7.0.exe/download
+    #    and set the install location here
+    PCRE_DIR=C:/Pcre
+
+    # For REGEX on Windows
+    #    compile gnuregex inside an EPICS support module from the sources at
+    #    http://www.aps.anl.gov/epics/download/extensions/gnuregex0_13.tar.gz
+    #    and set the module location here
+    REGEX_DIR=C:/epics/modules/regex
+
+endif
+
+# Negative regexp matching: !pattern matches when pattern does not match
+#USE_NEG_REGEXP=YES
+
+# Enable DENY FROM
+USE_DENY_FROM=YES
+
+# Optimization
+#HOST_OPT = NO
+
+# Compiler options
+#USR_CXXFLAGS += -xsb
+
+# Use Purify
+#PURIFY=YES
+
+# Use Quantify
+#QUANTIFY=YES
+
+# Turn on debug mode
+#USR_CXXFLAGS += -DDEBUG_MODE
+
+# Turn off Gateway debug calls:
+#USR_CXXFLAGS += -DNODEBUG
+
+# Use stat PV's
+USR_CXXFLAGS += -DSTAT_PVS
+
+# Use rate statistics
+USR_CXXFLAGS += -DRATE_STATS
+
+# Use control PVs
+USR_CXXFLAGS += -DCONTROL_PVS
+
+# Use heartbeat PV
+#USR_CXXFLAGS += -DHEARTBEAT_PV
+
+# Use CAS diagnostics statistics
+USR_CXXFLAGS += -DCAS_DIAGNOSTICS
+
+# Install exception handler and print exceptions to log file
+USR_CXXFLAGS += -DHANDLE_EXCEPTIONS
+
+#######################################################################
+# END of CA Gateway specific settings
+#######################################################################
+
 # CHECK_RELEASE controls the consistency checking of the support
 #   applications pointed to by the RELEASE* files.
 # Normally CHECK_RELEASE should be set to YES.

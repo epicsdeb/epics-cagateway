@@ -40,7 +40,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 # include <direct.h>
 # include <process.h>
 # define WIN32_MAXSTDIO 2048
@@ -56,6 +56,7 @@
 #include <gdd.h>
 #include <epicsVersion.h>
 #include <caProto.h>
+#include <errSymTbl.h>
 #include "gateResources.h"
 #include "gateServer.h"
 
@@ -69,7 +70,7 @@ static int setEnv(const char *var, const int ival, char **envString);
 static void printEnv(FILE *fp, const char *var);
 
 // Global variables
-#ifndef WIN32
+#ifndef _WIN32
 static pid_t gate_pid;
 #endif
 static int death_flag=0;
@@ -192,7 +193,7 @@ static const char *report_file=NULL;
 #ifdef WITH_CAPUTLOG
 static const char *caputlog_address=NULL;
 #endif
-#ifndef WIN32
+#ifndef _WIN32
 static pid_t parent_pid;
 #endif
 
@@ -258,7 +259,7 @@ static void sig_end(int sig)
 	fflush(stderr);
 	
 	switch(sig)	{
-#ifndef WIN32
+#ifndef _WIN32
 	case SIGHUP:
 #ifdef USE_SYSLOG
 		syslog(LOG_NOTICE|LOG_DAEMON,"PV Gateway Ending (SIGHUP)");
@@ -267,7 +268,7 @@ static void sig_end(int sig)
 		  timeStamp());
 		if(save_hup) save_hup(sig);
 		break;
-#endif //#ifndef WIN32
+#endif //#ifndef _WIN32
 	case SIGTERM:
 #ifdef USE_SYSLOG
 		syslog(LOG_NOTICE|LOG_DAEMON,"PV Gateway Ending (SIGTERM)");
@@ -291,7 +292,7 @@ static void sig_end(int sig)
 		fprintf(stderr,"PV Gateway Aborting (SIGILL)\n");
 		if(save_ill) save_ill(sig);
 		abort();
-#ifndef WIN32
+#ifndef _WIN32
 	case SIGBUS:
 #ifdef USE_SYSLOG
 		syslog(LOG_NOTICE|LOG_DAEMON,"PV Gateway Aborting (SIGBUS)");
@@ -300,7 +301,7 @@ static void sig_end(int sig)
 		  timeStamp());
 		if(save_bus) save_bus(sig);
 		abort();
-#endif //#ifndef WIN32
+#endif //#ifndef _WIN32
 	case SIGSEGV:
 #ifdef USE_SYSLOG
 		syslog(LOG_NOTICE|LOG_DAEMON,"PV Gateway Aborting (SIGSEGV)");
@@ -322,7 +323,7 @@ static void sig_end(int sig)
 	stopEverything();
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 static void sig_chld(int /*sig*/)
 {
 #ifdef SOLARIS
@@ -332,9 +333,9 @@ static void sig_chld(int /*sig*/)
 #endif
 	signal(SIGCHLD,sig_chld);
 }
-#endif //#ifndef WIN32
+#endif //#ifndef _WIN32
 
-#ifndef WIN32
+#ifndef _WIN32
 static void sig_stop(int /*sig*/)
 {
 	if(gate_pid)
@@ -342,7 +343,7 @@ static void sig_stop(int /*sig*/)
 	
 	death_flag=1;
 }
-#endif
+#endif //#ifndef _WIN32
 
 } // End extern "C"
 
@@ -354,7 +355,7 @@ static int startEverything(char *prefix)
 	char *gate_ca_list=NULL;
 	char *gate_ca_port=NULL;
 	int sid;
-#ifndef WIN32
+#ifndef _WIN32
 	FILE* fp;
 	struct rlimit lim;
 #endif
@@ -414,7 +415,7 @@ static int startEverything(char *prefix)
 	}
 #endif
 	
-#ifndef WIN32
+#ifndef _WIN32
 	// Make script file ("gateway.killer" by default)
 	errno=0;
 	if((fp=fopen(GATE_SCRIPT_FILE,"w"))==(FILE*)NULL) {
@@ -480,9 +481,9 @@ static int startEverything(char *prefix)
 	
 	if(fp!=stderr) fclose(fp);
 	chmod(GATE_SCRIPT_FILE,00755);
-#endif  //#ifndef WIN32
+#endif  //#ifndef _WIN32
 	
-#ifndef WIN32
+#ifndef _WIN32
 	// Make script file ("gateway.restart" by default)
 	errno=0;
 	if((fp=fopen(GATE_RESTART_FILE,"w"))==(FILE*)NULL) {
@@ -499,10 +500,10 @@ static int startEverything(char *prefix)
 	
 	if(fp!=stderr) fclose(fp);
 	chmod(GATE_RESTART_FILE,00755);
-#endif  //#ifndef WIN32
+#endif  //#ifndef _WIN32
 	
 	// Increase process limits to max
-#ifdef WIN32
+#ifdef _WIN32
 	// Set open file limit (512 by default, 2048 is max)
 # if DEBUG_OPENFILES
     int maxstdio=_getmaxstdio();
@@ -518,7 +519,7 @@ static int startEverything(char *prefix)
     maxstdio=_getmaxstdio();
     printf("Permitted open files (after): %d\n",maxstdio);
 # endif
-#else  //#ifdef WIN32
+#else  //#ifdef _WIN32
 	// Set process limits
 	if(getrlimit(RLIMIT_NOFILE,&lim)<0) {
 		fprintf(stderr,"Cannot retrieve the process FD limits\n");
@@ -572,7 +573,7 @@ static int startEverything(char *prefix)
 	}
 #endif
 	
-#ifndef WIN32
+#ifndef _WIN32
 	save_hup=signal(SIGHUP,sig_end);
 	save_bus=signal(SIGBUS,sig_end);
 #endif
@@ -589,7 +590,7 @@ static int startEverything(char *prefix)
 	// Output
 	printf("%s %s [%s %s]\n",
 	  timeStamp(),GATEWAY_VERSION_STRING,__DATE__,__TIME__);
-#ifndef WIN32
+#ifndef _WIN32
 	if(global_resources->getServerMode()) {
 		printf("%s PID=%d ServerPID=%d\n",EPICS_VERSION_STRING,
 		  sid,parent_pid);
@@ -691,7 +692,7 @@ static int startEverything(char *prefix)
 
 int main(int argc, char** argv)
 {
-#ifndef WIN32
+#ifndef _WIN32
 	uid_t uid;
 	gid_t gid;
 #endif
@@ -712,7 +713,7 @@ int main(int argc, char** argv)
 	char* command_file=NULL;
 	char* stat_prefix=NULL;
 	time_t t;
-#ifndef WIN32
+#ifndef _WIN32
 	char logSaveFile[1024];  // Should use MAX_PATH or PATH_MAX
 	char putlogSaveFile[1024];  // Should use MAX_PATH or PATH_MAX
 	struct stat sbuf;
@@ -760,6 +761,10 @@ int main(int argc, char** argv)
 								case 'L' :
 									mask |= DBE_LOG;
 									break;
+								case 'p' :
+								case 'P' :
+									mask |= DBE_PROPERTY;
+									break;
 								default :
 									break;
 								}
@@ -787,7 +792,7 @@ int main(int argc, char** argv)
 					read_only=1;
 					not_done=0;
 					break;
-#ifndef WIN32
+#ifndef _WIN32
 				case PARM_UID:
 					if(++i>=argc) no_error=0;
 					else {
@@ -805,7 +810,7 @@ int main(int argc, char** argv)
 					}
 					break;
 #endif
-#ifndef WIN32
+#ifndef _WIN32
 				case PARM_GID:
 					if(++i>=argc) no_error=0;
 					else {
@@ -1115,7 +1120,7 @@ int main(int argc, char** argv)
 		fprintf(stderr,"\tmask=%s\n",gr->eventMaskString());
 		fprintf(stderr,"\tcaching = %s\n",gr->getCacheMode() ? "enabled" : "disabled" );
 		fprintf(stderr,"\tarchive monitor = %s\n",gr->getArchiveMode() ? "enabled" : "disabled" );		
-#ifndef WIN32
+#ifndef _WIN32
 		fprintf(stderr,"\tuser id=%ld\n",(long)getuid());
 		fprintf(stderr,"\tgroup id=%ld\n",(long)getgid());
 #endif
@@ -1173,11 +1178,11 @@ int main(int argc, char** argv)
 	gr->setMaxBytes((unsigned)maxBytesAsALong);	
 
 	
-#ifndef WIN32
+#ifndef _WIN32
 	gr->setServerMode(make_server);
 #endif
 
-#ifndef WIN32
+#ifndef _WIN32
 	if(make_server)
 	{
 		// Start watcher process
@@ -1199,7 +1204,7 @@ int main(int argc, char** argv)
 		if(log_file==NULL) log_file=GATE_LOG_FILE;
 		time(&t);
 
-#ifndef WIN32
+#ifndef _WIN32
 		char *logerror=NULL;
 		char *putlogerror=NULL;
 		// Save log file if it exists
@@ -1272,7 +1277,7 @@ int main(int argc, char** argv)
 			fflush(stderr);
 		}
 
-#ifndef WIN32
+#ifndef _WIN32
 		// Repeat error messages to log
 		if(logerror) {
 			fprintf(stderr,"%s Failed to move old log to %s\n",
@@ -1323,7 +1328,7 @@ int main(int argc, char** argv)
 		fprintf(stderr," event mask = %s\n",gr->eventMaskString());
 		fprintf(stderr," caching = %s\n",gr->getCacheMode() ? "enabled" : "disabled" );
 		fprintf(stderr," archive monitor = %s\n",gr->getArchiveMode() ? "enabled" : "disabled" );		
-#ifndef WIN32
+#ifndef _WIN32
 		fprintf(stderr," user id= %ld\n",(long)getuid());
 		fprintf(stderr," group id= %ld\n",(long)getgid());
 #endif
@@ -1463,7 +1468,7 @@ static void print_instructions(void)
 
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 // -------------------------------------------------------------------
 //  part that watches the gateway process and ensures that it stays up
 
@@ -1567,11 +1572,11 @@ static int manage_gateway(void)
 
 	return rc;
 }
-#endif //#ifdef WIN32
+#endif //#ifdef _WIN32
 
 static int setEnv(const char *var, const char *val, char **envString)
 {
-	int len=strlen(var)+strlen(val)+2;
+    size_t len=strlen(var)+strlen(val)+2;
 
 	*envString=(char *)malloc(len);
 	if(!*envString) {
@@ -1594,7 +1599,7 @@ static int setEnv(const char *var, const char *val, char **envString)
 static int setEnv(const char *var, int ival, char **envString)
 {
 	// Allow 40 for size of ival
-	int len=strlen(var)+40+2;
+    size_t len=strlen(var)+40+2;
 
 	*envString=(char *)malloc(len);
 	if(!*envString) {
@@ -1621,7 +1626,7 @@ static int setEnv(const char *var, int ival, char **envString)
 
 void printRecentHistory(void)
 {
-#ifndef WIN32
+#ifndef _WIN32
 	int nStarts=0;
 	int i;
 

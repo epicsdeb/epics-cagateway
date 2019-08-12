@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 # define strcasecmp stricmp
 # include <string.h>
 #else
@@ -233,7 +233,7 @@ aitBool gateAsEntry::compilePattern(int line) {
 	pat_buff.translate=0; pat_buff.fastmap=0;
 	pat_buff.allocated=0; pat_buff.buffer=0;
 
-	if((err = re_compile_pattern(pattern, strlen(pattern), &pat_buff)))	{
+    if((err = re_compile_pattern(pattern, (int) strlen(pattern), &pat_buff)))	{
 		fprintf(stderr,"Line %d: Error in regexp %s : %s\n", line, pattern, err);
 		return aitFalse;
 	}
@@ -388,7 +388,7 @@ gateAsEntry* gateAs::findEntryInList(const char* pv, gateAsList& list) const
 	tsSLIter<gateAsEntry> pi = list.firstIter();
 	
 	while(pi.pointer()) {
-		int len = strlen(pv);
+        int len = (int) strlen(pv);
 #ifdef USE_PCRE
 		pi->substrings=pcre_exec(pi->pat_buff, NULL,
                     pv, len, 0, PCRE_ANCHORED, pi->ovector, 30);
@@ -398,7 +398,7 @@ gateAsEntry* gateAs::findEntryInList(const char* pv, gateAsList& list) const
 #endif
 		) break;
 #else
-		if((re_match(&pi->pat_buff,pv,len,0,&pi->regs) == len)
+        if((re_match(&pi->pat_buff, pv, len, 0, &pi->regs) == len)
 #ifdef USE_NEG_REGEXP                
 		    ^ pi->negate_pattern
 #endif
@@ -735,9 +735,9 @@ long gateAs::reInitialize(const char* afile, const char* lfile)
 	return 0;
 }
 
-int gateAs::readFunc(char* buf, int max)
+int gateAs::readFunc(char* buf, size_t max)
 {
-	int l,n;
+    size_t l, n;
 	static aitBool one_pass=aitFalse;
 	static char rbuf[150];
 	static char* rptr=NULL;
@@ -759,7 +759,7 @@ int gateAs::readFunc(char* buf, int max)
     }
 	
 	l=strlen(rptr);
-	n=(l<=max)?l:max;
+    n = (l <= max) ? l : max;
 	if(n) {
 		memcpy(buf,rptr,n);
 		rptr+=n;
@@ -768,7 +768,7 @@ int gateAs::readFunc(char* buf, int max)
 	if(rptr[0]=='\0')
 	  rptr=NULL;
 	
-    return n;
+    return (int) n;
 }
 
 void gateAs::report(FILE* fd)

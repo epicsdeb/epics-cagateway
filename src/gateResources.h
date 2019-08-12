@@ -43,7 +43,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #else
 #include <sys/time.h>
 #endif
@@ -86,6 +86,7 @@ public:
 			if (event_mask & DBE_VALUE) strcat(event_mask_string, "v");
 			if (event_mask & DBE_ALARM) strcat(event_mask_string, "a");
 			if (event_mask & DBE_LOG)   strcat(event_mask_string, "l");
+			if (event_mask & DBE_PROPERTY)   strcat(event_mask_string, "p");
 		}
 	unsigned long eventMask(void) const		{ return event_mask; }
 	const char* eventMaskString(void) const	{ return event_mask_string; }

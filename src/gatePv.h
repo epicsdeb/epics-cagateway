@@ -33,7 +33,7 @@
 
 #include <sys/types.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #else
 # include <sys/time.h>
 #endif
@@ -117,8 +117,11 @@ public:
 	int pendingTimeGet(void) const { return (time_get_state)?1:0; }
 	int monitored(void) const { return (mon_state)?1:0; }
 	int logMonitored(void) const { return (log_mon_state)?1:0; }	
+	int propMonitored(void) const { return (prop_mon_state)?1:0; }	
 	int alhMonitored(void) const { return (alh_mon_state)?1:0; }
 	int alhGetPending(void) const { return (alh_get_state)?1:0; }
+	int propGetPending(void) const { return (prop_get_state)?1:0; }
+	int logGetPending(void) const { return (log_get_state)?1:0; }
 	int needAddRemove(void) const { return (complete_flag)?1:0; }
 	int abort(void) const { return (abort_flag)?1:0; }
 	
@@ -148,8 +151,10 @@ public:
 	int life(void);                 // set to connected (CAC connect)
 	int monitor(void);              // add monitor
 	int logMonitor(void);           // add log monitor	
+	int propMonitor(void);           // add prop monitor	
 	int unmonitor(void);            // delete monitor
 	int logUnmonitor(void);         // delete log monitor	
+	int propUnmonitor(void);         // delete prop monitor	
 	int alhMonitor(void);           // add alh info monitor
 	int alhUnmonitor(void);         // delete alh info monitor
 	int get(readType read_type);                  // get callback
@@ -174,6 +179,10 @@ public:
 
 	void markAlhGetPending(void) { alh_get_state=1; }
 	void markAlhNoGetPending(void) { alh_get_state=0; }
+	void markPropGetPending(void) { prop_get_state=1; }
+	void markPropNoGetPending(void) { prop_get_state=0; }
+    void markLogGetPending(void) { log_get_state=1; }
+    void markLogNoGetPending(void) { log_get_state=0; }
 	
 	
 protected:
@@ -191,7 +200,9 @@ private:
 	void markMonitored(void) { mon_state=1; }
 	void markNotMonitored(void) { mon_state=0; }
 	void markLogMonitored(void) { log_mon_state=1; }
+	void markPropMonitored(void) { prop_mon_state=1; }
 	void markLogNotMonitored(void) { log_mon_state=0; }		
+	void markPropNotMonitored(void) { prop_mon_state=0; }		
 	void markCtrlGetPending(void) { ctrl_get_state=1; }
 	void markNoCtrlGetPending(void) { ctrl_get_state=0; }
 	void markTimeGetPending(void) { time_get_state=1; }
@@ -221,6 +232,7 @@ private:
 	chid chID;                 // Channel access ID
 	evid evID;                 // Channel access event id
 	evid logID;                 // Channel access event id	
+	evid propID;                 // Channel access event id	
 	evid alhID;                // Channel access alh info event id
 	chtype event_type;         // DBR type associated with eventCB (event_data)
 	chtype data_type;          // DBR type associated with getCB (pv_data)
@@ -234,10 +246,13 @@ private:
 	
 	int mon_state;     // 0=not monitored, 1=is monitored
 	int log_mon_state;     // 0=not log monitored, 1=is log monitored	
+	int prop_mon_state;     // 0=not prop monitored, 1=is prop monitored	
 	int ctrl_get_state;     // 0=no ctrl get pending, 1=ctrl get pending
 	int time_get_state;     // 0=no time get pending, 1=time get pending
 	int alh_mon_state; // 0=alh info not monitored, 1=alh info is monitored
 	int alh_get_state; // 0=no alh info get pending, 1=alh info get pending
+	int prop_get_state; // 0=no prop info get pending, 1=prop info get pending
+	int log_get_state; // 0=no log info get pending, 1=log info get pending
 	int abort_flag;	   // true if activate-connect sequence should be aborted
 	int complete_flag; // true if ADD/REMOVE required after completion
 	
@@ -287,6 +302,7 @@ public:
     static void accessCB(ACCESS_ARGS args);     // access security callback
     static void eventCB(EVENT_ARGS args);       // value-changed callback
     static void logEventCB(EVENT_ARGS args);    // value-changed callback
+	static void propEventCB(EVENT_ARGS args);   // value-changed callback	
     static void alhCB(EVENT_ARGS args);         // alh info value-changed callback
     static void putCB(EVENT_ARGS args);         // put callback
     static void getCB(EVENT_ARGS args);         // get callback

@@ -78,8 +78,8 @@ override_dh_installdocs:
 	install -d $(docdir)/html
 	install -d $(CURDIR)/debian/epics-cagateway-dbg//usr/share/doc/epics-cagateway-dbg
 	cp -a docs/* $(docdir)/html
-	cp -a gateway.notes $(docdir)/changelog
-	cp -a gateway.notes $(CURDIR)/debian/epics-cagateway-dbg//usr/share/doc/epics-cagateway-dbg/changelog
+	cp -a RELEASE_NOTES.md $(docdir)/changelog
+	cp -a RELEASE_NOTES.md $(CURDIR)/debian/epics-cagateway-dbg//usr/share/doc/epics-cagateway-dbg/changelog
 	dh_installdocs
 
 override_dh_compress:

@@ -1,4 +1,14 @@
-epics-cagateway (2.0.6.0-2) UNRELEASED; urgency=medium
+epics-cagateway (2.1.1.0-1) unstable; urgency=medium
+
+  * add cagateway-ssh script with quilt 3.0 compliant patch
+  * New upstream version 2.1.1.0
+  * update dependencies and compat level
+  * add 0002-ignore-pyTestsApp.patch
+  * gateway.notes was renamed
+
+ -- Christoph Schröder <christoph.schroeder@helmholtz-berlin.de>  Tue, 13 Aug 2019 11:06:25 +0200
+
+epics-cagateway (2.0.6.0-2) unstable; urgency=medium
 
   * Add cagateway-ssh helper script for use with ssh port forwarding
 

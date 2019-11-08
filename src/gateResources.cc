@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 /* WIN32 does not have unistd.h and does not define the following constants */
 # define F_OK 00
 # define W_OK 02
@@ -72,17 +72,17 @@ char *timeStamp(void)
 // should copy it to a safe place e.g. strcpy(savetime,timestamp());
 char *timeString(time_t time)
 {
-	static char timeStr[80];
-	int rem=time;
-	int days=rem/86400;
-	rem-=days*86400;
-	int hours=rem/3600;
-	rem-=hours*3600;
-	int min=rem/60;
-	rem-=min*60;
-	int sec=rem;
-	sprintf(timeStr,"%3d:%02d:%02d:%02d",days,hours,min,sec);
-	return timeStr;
+    static char timeStr[80];
+    int rem = (int) time;
+    int days=rem/86400;
+    rem-=days*86400;
+    int hours=rem/3600;
+    rem-=hours*3600;
+    int min=rem/60;
+    rem-=min*60;
+    int sec=rem;
+    sprintf(timeStr,"%3d:%02d:%02d:%02d",days,hours,min,sec);
+    return timeStr;
 }
 
 // Gets the computer name and allocates memory for it using strDup
@@ -91,7 +91,7 @@ char *getComputerName(void)
 {
 	char*name=NULL;
 
-#ifdef WIN32
+#ifdef _WIN32
 	TCHAR computerName[MAX_COMPUTERNAME_LENGTH+1];
 	DWORD size=MAX_COMPUTERNAME_LENGTH+1;
 	// Will probably be uppercase

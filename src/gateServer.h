@@ -31,7 +31,7 @@
 
 #include <sys/types.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #else
 # include <unistd.h>
 # include <sys/time.h>
@@ -235,7 +235,7 @@ public:
 	void clearStat(int type, gateStatType statType);
 	void initStats(char *prefix);
 	char* stat_prefix;
-	int stat_prefix_len;	
+    size_t stat_prefix_len;
 	gateServerStats stat_table[statCount];
 #endif	
 #ifdef STAT_PVS
@@ -330,7 +330,7 @@ private:
 	static volatile unsigned long quitserver_flag;
 	
 public:
-#ifndef WIN32
+#ifndef _WIN32
 	static void sig_usr1(int);
 	static void sig_usr2(int);
 #endif
@@ -406,17 +406,27 @@ inline int gateServer::pvDelete(const char* name, gatePvData*& pv)
 {
 	gatePvNode* n;
 	int rc;
-	if((rc=pvFind(name,n))==0) { pv=n->getData(); delete n; }
-	else pv=NULL;
-	return rc;
+    if ((rc = pvFind(name,n)) == 0) {
+        pv_list.remove(name, n);
+        pv = n->getData();
+        delete n;
+    }
+    else
+        pv = NULL;
+    return rc;
 }
 inline int gateServer::conDelete(const char* name, gatePvData*& pv)
 {
 	gatePvNode* n;
 	int rc;
-	if((rc=conFind(name,n))==0) { pv=n->getData(); delete n; }
-	else pv=NULL;
-	return rc;
+    if ((rc = conFind(name,n)) == 0) {
+        pv_con_list.remove(name, n);
+        pv = n->getData();
+        delete n;
+    }
+    else
+        pv = NULL;
+    return rc;
 }
 
 inline int gateServer::vcAdd(const char* name, gateVcData& pv)

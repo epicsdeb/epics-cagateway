@@ -43,7 +43,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #else
 # include <unistd.h>
 #endif
@@ -357,7 +357,8 @@ gateVcData::gateVcData(gateServer* m,const char* name) :
 
 	select_mask|=(mrg->alarmEventMask()|
 	  mrg->valueEventMask()|
-	  mrg->logEventMask());
+	  mrg->logEventMask()|
+      mrg->propertyEventMask());
 	alh_mask|=mrg->alarmEventMask();
 	client_mask=0u;
 
@@ -562,7 +563,7 @@ int gateVcData::setEventData(gdd* dd)
 
 #if DEBUG_GDD
 	heading("gateVcData::setEventData",name());
-	dumpdd(1,"dd (incoming)",name(),dd);
+    dumpdd(1,"dd (new value data)",name(),dd);
 #endif
 
 #if DEBUG_DELAY
@@ -750,6 +751,11 @@ void gateVcData::setPvData(gdd* dd)
 	// this is the PV atttributes, which come in during the connect state
 	// currently
 	gateDebug2(2,"gateVcData::setPvData(gdd=%p) name=%s\n",(void *)dd,name());
+
+#if DEBUG_GDD
+    heading("gateVcData::setPvData",name());
+    dumpdd(1,"dd (new property data)",name(),dd);
+#endif
 
 	if(pv_data) pv_data->unreference();
 	pv_data=dd;
@@ -1084,6 +1090,9 @@ caStatus gateVcData::read(const casCtx& ctx, gdd& dd)
 		if (caProtoMask & DBE_LOG) {
 			client_mask = DBE_LOG;
 		}
+		if (caProtoMask & DBE_PROPERTY) {
+			client_mask = DBE_PROPERTY;
+		}
 	}
 
 #if DEBUG_GDD || DEBUG_ENUM
@@ -1168,7 +1177,8 @@ caStatus gateVcData::read(const casCtx& ctx, gdd& dd)
 			return S_casApp_postponeAsyncIO;
 		} else {
 			// Copy the current state into the dd
-			copyState(dd);
+            gateDebug1(10,"gateVcData::read() %s using cached pv data for reply\n",name());
+            copyState(dd);
 		}
 		return S_casApp_success;
 	case gddAppType_value: if(!global_resources->getCacheMode()) read_type = timeType;

@@ -20,6 +20,8 @@ CHECK_RELEASE = YES
 #   INSTALL_LOCATION here.
 #INSTALL_LOCATION=</path/name/to/install/top>
 
+-include $(TOP)/../configure/CONFIG_SITE
+
 # Attention developers: Do not edit the settings in this file!
 #
 # Create a file CONFIG_SITE.local containing your local settings, e.g.

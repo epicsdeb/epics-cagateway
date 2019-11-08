@@ -1,0 +1,80 @@
+record(calcout, "ioc:auto:cnt") {
+  field(SCAN, "1 second")
+  field(CALC, "A+B")
+  field(INPA, "ioc:auto:cnt.VAL NPP")
+  field(INPB, "0.01")
+  field(OCAL, "sin(A)")
+  field(DOPT, "Use OCAL")
+  field(OUT , "ioc:auto PP")
+}
+
+record(ai, "ioc:auto") {
+  field(PREC , 10)
+  field(DESC , "A PV that changes once a second")
+}
+
+record(ai, "ioc:passive0") {
+  field(DESC , "No MDEL/ADEL + passive")
+  field(SCAN, "Passive")
+}
+
+record(ai, "ioc:passiveADEL") {
+  field(DESC , "ADEL + passive")
+  field(ADEL , "10.0")
+  field(SCAN, "Passive")
+}
+
+record(ai, "ioc:passiveALRM") {
+  field(DESC , "Alarm + passive")
+  field(SCAN, "Passive")
+  field(HIGH, "5.0")
+  field(HIHI, "10.0")
+  field(HSV, MINOR)
+  field(HHSV, MAJOR)
+}
+
+record(ai, "ioc:passiveADELALRM") {
+  field(DESC , "ADEL, Alarm + passive")
+  field(SCAN, "Passive")
+  field(ADEL , "0.5")
+  field(HIGH, "5.0")
+  field(HIHI, "10.0")
+  field(HSV, MINOR)
+  field(HHSV, MAJOR)
+}
+
+record(mbbi, "ioc:passiveMBBI") {
+  field(DESC , "Passive mbbi")
+  field(SCAN, "Passive")
+}
+
+record(longin, "ioc:passivelongin") {
+  field(DESC , "Passive longin")
+  field(SCAN, "Passive")
+}
+
+record(waveform, "ioc:passivewaveform") {
+  field(DESC , "Passive waveform")
+  field(SCAN, "Passive")
+  field(NELM, "1000")
+  field(FTVL, "DOUBLE")
+}
+
+record(ai, "ioc:gwcachetest") {
+  field(PREC, "3")
+  field(EGU, "wobbles")
+  field(HIGH, "10")
+  field(HIHI, "100")
+  field(HSV , "MINOR")
+  field(HHSV , "MAJOR")
+  field(LOW , "-10")
+  field(LOLO , "-100")
+  field(LSV , "MINOR")
+  field(LLSV , "MAJOR")
+}
+
+record(mbbi, "ioc:enumtest") {
+  field(ZRST, "zero")
+  field(ONST, "one")
+  field(TWST, "two")
+}

@@ -1,0 +1,48 @@
+#!/bin/sh
+set -e -x
+#
+# cagateway-ssh
+# cagateway-ssh $CAPORT
+# cagateway-ssh $CAPORT $GWPORT
+#
+# Run cagateway for use with SSH port forwarding
+#   $ ssh -L 5064:localhost:5064 iochost
+# or
+#   $ ssh -L 5064:iochost:5064 sshgw
+#
+# For non-stanard CA port eg. 15064
+#  -L 5064:localhost:15064
+
+# The local port which is being forwarded
+CAPORT=${1:-5064}
+# local TCP port where GW will listen (can't be the same as $CAPORT)
+GWPORT=${2:-${RANDOM}}
+
+WORK=`mktemp -d`
+
+trap "rm -rf $WORK" INT TERM QUIT EXIT
+
+cd "$WORK"
+
+# Allow all access
+cat << EOF > access
+ASG(DEFAULT) {
+  RULE(1,WRITE)
+}
+EOF
+
+# Allow all PVs
+cat << EOF > pvlist
+EVALUATION ORDER ALLOW, DENY
+.* ALLOW
+EOF
+
+# cagateway TCP port
+export EPICS_CAS_SERVER_PORT=$GWPORT
+
+# Lookup only through SSH and localhost UDP
+export EPICS_CA_NAME_SERVERS=localhost:$CAPORT
+export EPICS_CA_ADDR_LIST=localhost
+export EPICS_CA_AUTO_ADDR_LIST=NO
+
+cagateway -pvlist pvlist -access access

@@ -29,7 +29,7 @@ class TestDBEValue(unittest.TestCase):
     def onChange(self, pvname=None, **kws):
         self.eventsReceived += 1
         if gwtests.verbose:
-            print pvname, " changed to ", kws['value']
+            print(pvname, " changed to ", kws['value'])
         
     def testValueNoDeadband(self):
         '''DBE_VALUE monitor on an ai - value changes generate events.'''
@@ -42,7 +42,7 @@ class TestDBEValue(unittest.TestCase):
 
         for val in range(10):
             ioc.put(val, wait=True)
-        time.sleep(.05)
+        time.sleep(.1)
 
         # We get 11 events: at connection, then at 10 value changes (puts)
         self.assertTrue(self.eventsReceived == 11, 'events expected: 11; events received: ' + str(self.eventsReceived))

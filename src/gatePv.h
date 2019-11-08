@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 #ifndef _GATEPV_H_
 #define _GATEPV_H_
@@ -83,7 +83,7 @@ class gateAsEntry;
 class gatePvCallbackId : public tsDLNode<gatePvCallbackId>
 {
 public:
-	gatePvCallbackId(unsigned long idIn, 
+	gatePvCallbackId(unsigned long idIn,
 	    gatePvData *pvIn, void * pPrivateIn=0 ) :
 	id(idIn),pv(pvIn),pPrivate(pPrivateIn) {};
 	unsigned long getID(void) const { return id; }
@@ -106,25 +106,25 @@ public:
 	~gatePvData(void);
 
     typedef gdd* (gatePvData::*gateCallback)(EVENT_ARGS *);
-	
+
 	int active(void) const { return (pv_state==gatePvActive)?1:0; }
 	int inactive(void) const { return (pv_state==gatePvInactive)?1:0; }
 	int disconnected(void) const { return (pv_state==gatePvDisconnect)?1:0; }
 	int dead(void) const { return (pv_state==gatePvDead)?1:0; }
 	int pendingConnect(void) const { return (pv_state==gatePvConnect)?1:0; }
-	
+
 	int pendingCtrlGet(void) const { return (ctrl_get_state)?1:0; }
 	int pendingTimeGet(void) const { return (time_get_state)?1:0; }
 	int monitored(void) const { return (mon_state)?1:0; }
-	int logMonitored(void) const { return (log_mon_state)?1:0; }	
-	int propMonitored(void) const { return (prop_mon_state)?1:0; }	
+	int logMonitored(void) const { return (log_mon_state)?1:0; }
+	int propMonitored(void) const { return (prop_mon_state)?1:0; }
 	int alhMonitored(void) const { return (alh_mon_state)?1:0; }
 	int alhGetPending(void) const { return (alh_get_state)?1:0; }
 	int propGetPending(void) const { return (prop_get_state)?1:0; }
 	int logGetPending(void) const { return (log_get_state)?1:0; }
 	int needAddRemove(void) const { return (complete_flag)?1:0; }
 	int abort(void) const { return (abort_flag)?1:0; }
-	
+
 	const char* name(void) const { return pv_name; }
 	gateVcData* VC(void) const { return vc; }
 	gateAsEntry* getEntry(void) const { return asentry; }
@@ -144,34 +144,34 @@ public:
 	chtype eventType(void) const { return event_type; }
 	void checkEvent(void) { ca_poll(); }
 	double eventRate(void);
-	
+
 	int activate(gateVcData* from); // set to active (CAS connect)
 	int deactivate(void);           // set to inactive (CAS disconnect)
 	int death(void);                // set to not connected (CAC disconnect)
 	int life(void);                 // set to connected (CAC connect)
 	int monitor(void);              // add monitor
-	int logMonitor(void);           // add log monitor	
-	int propMonitor(void);           // add prop monitor	
+	int logMonitor(void);           // add log monitor
+	int propMonitor(void);           // add prop monitor
 	int unmonitor(void);            // delete monitor
-	int logUnmonitor(void);         // delete log monitor	
-	int propUnmonitor(void);         // delete prop monitor	
+	int logUnmonitor(void);         // delete log monitor
+	int propUnmonitor(void);         // delete prop monitor
 	int alhMonitor(void);           // add alh info monitor
 	int alhUnmonitor(void);         // delete alh info monitor
 	int get(readType read_type);                  // get callback
 	int put(const gdd &, class gateAsyncW * );  // put
-	
+
 	time_t timeAlive(void) const;
 	time_t timeActive(void) const;
-	time_t timeInactive(void) const;	
+	time_t timeInactive(void) const;
 	time_t timeConnecting(void) const;
 	time_t timeDead(void) const;
 	time_t timeDisconnected(void) const;
-	
+
 #if 0
 	// KE: Unused
 	time_t timeSinceLastTrans(void) const;
 #endif
-	
+
 	void setVC(gateVcData* t) { vc=t; }
 	void setTransTime(void);
 	void addET(const casCtx&);
@@ -183,8 +183,8 @@ public:
 	void markPropNoGetPending(void) { prop_get_state=0; }
     void markLogGetPending(void) { log_get_state=1; }
     void markLogNoGetPending(void) { log_get_state=0; }
-	
-	
+
+
 protected:
 	void init(gateServer*,gateAsEntry *pase, const char* name);
 	void initClear(void);
@@ -201,8 +201,8 @@ private:
 	void markNotMonitored(void) { mon_state=0; }
 	void markLogMonitored(void) { log_mon_state=1; }
 	void markPropMonitored(void) { prop_mon_state=1; }
-	void markLogNotMonitored(void) { log_mon_state=0; }		
-	void markPropNotMonitored(void) { prop_mon_state=0; }		
+	void markLogNotMonitored(void) { log_mon_state=0; }
+	void markPropNotMonitored(void) { prop_mon_state=0; }
 	void markCtrlGetPending(void) { ctrl_get_state=1; }
 	void markNoCtrlGetPending(void) { ctrl_get_state=0; }
 	void markTimeGetPending(void) { time_get_state=1; }
@@ -213,16 +213,16 @@ private:
 	void markAddRemoveNotNeeded(void) { complete_flag=0; }
 	void markAbort(void) { abort_flag=1; }
 	void markNoAbort(void) { abort_flag=0; }
-	
+
 	void setState(gatePvState s) { pv_state=s; }
-	
+
     gdd* runEventCB(EVENT_ARGS *pArgs) { return (this->*event_func)(pArgs); }
     gdd* runDataCB(EVENT_ARGS *pArgs) { return (this->*data_func)(pArgs); }
     gdd* runValueDataCB(EVENT_ARGS *pArgs) { return (this->*value_data_func)(pArgs); }
-	
+
 	tsDLList<gateAsyncE> eio;  // pending exist test list
 	tsDLList<gatePvCallbackId> callback_list;  // callback list for puts
-	
+
 	gateServer* mrg;    // The gateServer that manages this gatePvData
 	gateVcData* vc;     // Pointer to the associated gateVcData, NULL if none
 	gateAsEntry* asentry;
@@ -231,8 +231,8 @@ private:
 	char* pv_name;             // Name of the process variable
 	chid chID;                 // Channel access ID
 	evid evID;                 // Channel access event id
-	evid logID;                 // Channel access event id	
-	evid propID;                 // Channel access event id	
+	evid logID;                 // Channel access event id
+	evid propID;                 // Channel access event id
 	evid alhID;                // Channel access alh info event id
 	chtype event_type;         // DBR type associated with eventCB (event_data)
 	chtype data_type;          // DBR type associated with getCB (pv_data)
@@ -243,10 +243,10 @@ private:
 	gateCallback event_func;   // Function called in eventCB for event_data
 	gateCallback data_func;    // Function called in getCB for pv_data
 	gateCallback value_data_func;    // Function called in getCB for pv_data
-	
+
 	int mon_state;     // 0=not monitored, 1=is monitored
-	int log_mon_state;     // 0=not log monitored, 1=is log monitored	
-	int prop_mon_state;     // 0=not prop monitored, 1=is prop monitored	
+	int log_mon_state;     // 0=not log monitored, 1=is log monitored
+	int prop_mon_state;     // 0=not prop monitored, 1=is prop monitored
 	int ctrl_get_state;     // 0=no ctrl get pending, 1=ctrl get pending
 	int time_get_state;     // 0=no time get pending, 1=time get pending
 	int alh_mon_state; // 0=alh info not monitored, 1=alh info is monitored
@@ -255,19 +255,19 @@ private:
 	int log_get_state; // 0=no log info get pending, 1=log info get pending
 	int abort_flag;	   // true if activate-connect sequence should be aborted
 	int complete_flag; // true if ADD/REMOVE required after completion
-	
+
 	time_t no_connect_time; // when no one connected to held PV
 	time_t dead_alive_time; // when PV went from dead to alive
 	time_t last_trans_time; // last transaction (put or get) occurred at this time
-	
+
 	//gjansa: until something better is found out
 	unsigned int bytes;
-	
+
 	casEventMask select_mask;
 	casEventMask alh_mask;
 	casEventMask value_mask;
 	casEventMask value_alarm_mask;
-	casEventMask value_log_mask;	
+	casEventMask value_log_mask;
 
 	// Callback functions used in eventCB
     gdd* eventStringCB(EVENT_ARGS *pArgs);
@@ -287,7 +287,7 @@ private:
     gdd* dataDoubleCB(EVENT_ARGS *pArgs);
     gdd* dataCharCB(EVENT_ARGS *pArgs);
     gdd* dataLongCB(EVENT_ARGS *pArgs);
-	
+
 	// Callback functions used in getCB for value
     gdd* valueDataStringCB(EVENT_ARGS *pArgs);
     gdd* valueDataEnumCB(EVENT_ARGS *pArgs);
@@ -302,7 +302,7 @@ public:
     static void accessCB(ACCESS_ARGS args);     // access security callback
     static void eventCB(EVENT_ARGS args);       // value-changed callback
     static void logEventCB(EVENT_ARGS args);    // value-changed callback
-	static void propEventCB(EVENT_ARGS args);   // value-changed callback	
+	static void propEventCB(EVENT_ARGS args);   // value-changed callback
     static void alhCB(EVENT_ARGS args);         // alh info value-changed callback
     static void putCB(EVENT_ARGS args);         // put callback
     static void getCB(EVENT_ARGS args);         // get callback

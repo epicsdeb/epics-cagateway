@@ -17,7 +17,7 @@ class IOCControl:
         childEnviron['EPICS_CA_ADDR_LIST'] = "localhost"
         childEnviron['EPICS_CA_AUTO_ADDR_LIST'] = "NO"
         # IOC_ environment overrides
-        for v in os.environ.keys():
+        for v in list(os.environ.keys()):
             if v.startswith("IOC_"):
                 childEnviron[v.replace("IOC_", "", 1)] = os.environ[v]
 
@@ -35,7 +35,7 @@ class IOCControl:
             iocCommand.extend(arglist)
 
         if gwtests.verbose:
-            print "Starting the IOC using\n", " ".join(iocCommand)
+            print("Starting the IOC using\n", " ".join(iocCommand))
         self.iocProcess = subprocess.Popen(iocCommand, env=childEnviron,
                 stdin=subprocess.PIPE, stdout=self.DEVNULL, stderr=subprocess.STDOUT)
         time.sleep(.5)
@@ -52,7 +52,7 @@ class IOCControl:
 
 if __name__ == "__main__":
     gwtests.setup()
-    print "Running the test IOC in verbose mode for {0} seconds".format(gwtests.gwRunDuration)
+    print("Running the test IOC in verbose mode for {0} seconds".format(gwtests.gwRunDuration))
     gwtests.verbose = True
     iocControl = IOCControl()
     iocControl.startIOC()

@@ -10,7 +10,7 @@ make -j2 $EXTRA
 # Configure pyepics and IOC wrapper
 eval `grep -m 1 "EPICS_BASE[[:space:]]*=" configure/RELEASE.local`
 EPICS_HOST_ARCH=`sh $EPICS_BASE/startup/EpicsHostArch`
-export PYEPICS_LIBCA=$EPICS_BASE/lib/$EPICS_HOST_ARCH/libca.so
+[ "$CMPLR" = "clang" ] || export PYEPICS_LIBCA=$EPICS_BASE/lib/$EPICS_HOST_ARCH/libca.so
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EPICS_BASE/lib/$EPICS_HOST_ARCH
 export PATH=$PATH:$EPICS_BASE/bin/$EPICS_HOST_ARCH
 

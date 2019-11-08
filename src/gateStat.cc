@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 // Author: Jim Kowalkowski
 // Date: 7/96
@@ -102,7 +102,7 @@ caStatus gateStatChan::write(const casCtx &ctx, const gdd &value)
         }
 #endif
 	}
-	
+
 	// Call the non-virtual-function write() in the gateStat
 	if(pStat) return pStat->write(ctx,value,*this);
 	else return S_casApp_noSupport;
@@ -213,7 +213,7 @@ gateStat::~gateStat(void)
 
 const char *gateStat::getName() const
 {
-	return name; 
+	return name;
 }
 
 casChannel* gateStat::createChannel(const casCtx &ctx,
@@ -256,7 +256,7 @@ caStatus gateStat::write(const casCtx& ctx, const gdd& dd, gateChan &/*chan*/)
 {
     gddApplicationTypeTable& table=gddApplicationTypeTable::AppTable();
 	caStatus retVal=S_casApp_noSupport;
-    
+
     if(value) {
 		table.smartCopy(value,&dd);
 		double val;

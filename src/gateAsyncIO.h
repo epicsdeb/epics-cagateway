@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 #ifndef _GATEASYNCIO_H_
 #define _GATEASYNCIO_H_
@@ -78,16 +78,16 @@ private:
 class gateAsyncW : public casAsyncWriteIO, public tsDLNode<gateAsyncW>
 {
 public:
-	gateAsyncW (const casCtx &ctx, 
+	gateAsyncW (const casCtx &ctx,
 		const gdd& wdd, bool isPutNotify ) :
 	  casAsyncWriteIO(ctx),
 	  _pList(0),
 	  _pDD(wdd),
-	  _isPutNotify(isPutNotify) {} 
-	
+	  _isPutNotify(isPutNotify) {}
+
 	virtual ~gateAsyncW(void);
-	
-	smartConstGDDPointer extractDD (); 
+
+	smartConstGDDPointer extractDD ();
 	bool isPutNotify () const { return _isPutNotify; }
 	void listAdd ( tsDLList<gateAsyncW> & list );
 	void listRemove ();

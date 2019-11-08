@@ -2,9 +2,9 @@ Source: epics-cagateway
 Section: admin
 Priority: extra
 Maintainer: Ralph Lange <Ralph.Lange@gmx.de>
-Build-Depends: debhelper (>= 8), epics-debhelper (>= 8.10~),
-               epics-dev (>= 3.14.12.3-7~),
-               epics-pcas-dev (>= 3.14.12.3-7~),
+Build-Depends: debhelper (>= 9), epics-debhelper (>= 8.10~),
+               epics-dev (>= 3.15.1-1~),
+               epics-pcas-dev (>= 3.15.1-1~),
 Standards-Version: 3.9.4
 Homepage: http://www.aps.anl.gov/epics/extensions/gateway/index.php
 Vcs-Git: https://github.com/epicsdeb/epics-cagateway.git

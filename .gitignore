@@ -1,13 +1,15 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
+bin/
+include/
+lib/
+db/
+dbd/
+configure/*.local
+html/
+**/O.*
+envPaths
+QtC-*
+*.orig
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+# Gateway generated scriptlets
+gateway.killer
+gateway.restart

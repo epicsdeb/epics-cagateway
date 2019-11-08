@@ -192,7 +192,7 @@ class gateAsLine : public tsSLNode<gateAsLine>
 {
 public:
 	gateAsLine(void) : buf(NULL) { }
-	gateAsLine(const char* line, int len, tsSLList<gateAsLine>& n) :
+    gateAsLine(const char* line, size_t len, tsSLList<gateAsLine>& n) :
 		buf(new char[len+1])
 	{
 		strncpy(buf,line,len+1);
@@ -251,7 +251,7 @@ private:
 	static FILE* rules_fd;
 
 public:
-	static int readFunc(char* buf, int max_size);
+    static int readFunc(char* buf, size_t max_size);
 };
 
 #ifdef USE_DENYFROM

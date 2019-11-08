@@ -5,35 +5,14 @@
 # Strahlung mbH (BESSY).
 # Copyright (c) 2002 The Regents of the University of California, as
 # Operator of Los Alamos National Laboratory.
-# Copyright (c) 2014 ITER Organization.
+# Copyright (c) 2014-2016 ITER Organization.
 # This file is distributed subject to a Software License Agreement found
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 
-# 3.14/3.15 Makefile for Gateway
-
 TOP = ..
 include $(TOP)/configure/CONFIG
 
-# Use Perl compatible regular expressions (instead of standard regex)
-#USE_PCRE=YES
-# Set location for Windows builds (system lib on Linux)
-#PCRE_DIR=C:\Pcre
-
-# Negative regexp matching: !pattern matches when pattern does not match
-#USE_NEG_REGEXP=YES
-
-# Enable DENY FROM
-USE_DENY_FROM=YES
-
-# Optimization
-#HOST_OPT = NO
-
-# Compiler options
-#USR_CXXFLAGS += -xsb
-
-# Purify
-#PURIFY=YES
 ifeq ($(PURIFY),YES)
   ifeq ($(OS_CLASS),solaris)
     PURIFY_FLAGS = -first-only -chain-length=26 -max_threads=256
@@ -43,8 +22,6 @@ ifeq ($(PURIFY),YES)
   endif
 endif
 
-# Quantify
-#QUANTIFY=YES
 ifeq ($(QUANTIFY),YES)
   ifeq ($(OS_CLASS),solaris)
     #QUANTIFY_FLAGS += -measure-timed-calls=user+system
@@ -65,28 +42,11 @@ ifeq ($(QUANTIFY),YES)
   endif
 endif
 
-# Turn on debug mode
-# USR_CXXFLAGS += -DDEBUG_MODE
-# Turn off Gateway debug calls:
-# USR_CXXFLAGS += -DNODEBUG
-# Use stat PV's
-USR_CXXFLAGS += -DSTAT_PVS
-# Use rate statistics
-USR_CXXFLAGS += -DRATE_STATS
-# Use control PV's
-USR_CXXFLAGS += -DCONTROL_PVS
-# Use heartbeat PV
-#USR_CXXFLAGS += -DHEARTBEAT_PV
-# Use CAS diagnostics statistics
-USR_CXXFLAGS += -DCAS_DIAGNOSTICS
-# Install exception handler and print exceptions to log file
-USR_CXXFLAGS += -DHANDLE_EXCEPTIONS
 ifeq ($(USE_DENY_FROM),YES)
-# Use deny from
 USR_CXXFLAGS += -DUSE_DENYFROM
 endif
+
 ifeq ($(USE_NEG_REGEXP),YES)
-# Use deny from
 USR_CXXFLAGS += -DUSE_NEG_REGEXP
 endif
 
@@ -94,42 +54,36 @@ endif
 USR_CXXFLAGS_solaris += -DRESERVE_FOPEN_FD
 
 ifeq ($(CMPLR_CLASS),msvc)
-  USR_CXXFLAGS_WIN32 += /DWIN32 /D_WINDOWS
   USR_LDFLAGS_WIN32 += /SUBSYSTEM:CONSOLE
-else
-  USR_CXXFLAGS_WIN32 += -DWIN32 -D_WINDOWS
 endif
 
 ifeq ($(USE_PCRE),YES)
   USR_CXXFLAGS += -DUSE_PCRE
   ifeq ($(OS_CLASS),WIN32)
-    USR_INCLUDES += -I$(PCRE_DIR)\inc
+    USR_INCLUDES += -I$(PCRE_DIR)/inc
     PROD_LIBS += pcre3
     ifeq ($(CMPLR_CLASS),msvc)
       ifeq ($(T_A),windows-x64)
-        pcre3_DIR = $(PCRE_DIR)\lib\x64
+        pcre3_DIR = $(PCRE_DIR)/lib/x64
       else
-        pcre3_DIR = $(PCRE_DIR)\lib
+        pcre3_DIR = $(PCRE_DIR)/lib
       endif
     else
-    pcre3_DIR = $(PCRE_DIR)\bin
+      pcre3_DIR = $(PCRE_DIR)/bin
     endif
   else
-  USR_SYS_LIBS += pcre
+    USR_SYS_LIBS += pcre
   endif
 else
-  ifeq ($(OS_CLASS),WIN32)
-    # Use Obj for object libraries and no Obj for import libraries
-    PROD_LIBS += regexObj
-    regexObj_DIR = $(EPICS_EXTENSIONS_LIB)
-  else
-    ifneq ($(OS_CLASS),Linux)
-      PROD_LIBS += regex
-      regex_DIR = $(EPICS_EXTENSIONS_LIB)
-    endif
+  # On Linux basic regex is part of libc
+  ifneq ($(OS_CLASS),Linux)
+    USR_INCLUDES += -I$(REGEX_DIR)/include
+    PROD_LIBS += regex
+    regex_DIR = $(REGEX_DIR)/lib/$(T_A)
   endif
 endif
 
+PROD_LIBS += cas gdd
 PROD_LIBS += $(EPICS_BASE_HOST_LIBS)
 
 gateway_SRCS += gateway.cc

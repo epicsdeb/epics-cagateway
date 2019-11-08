@@ -50,7 +50,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #else
 # include <unistd.h>
 # include <sys/time.h>
@@ -95,6 +95,9 @@ extern "C" {
 	}
 	extern void logEventCB(EVENT_ARGS args) {        // log event callback
 		gatePvData::logEventCB(args);
+	}	
+	extern void propEventCB(EVENT_ARGS args) {        // prop event callback
+		gatePvData::propEventCB(args);
 	}	
 }
 
@@ -195,6 +198,9 @@ gatePvData::gatePvData(gateServer* m,gateAsEntry* pase,const char* name)
 	value_alarm_mask|=(mrg->valueEventMask()|mrg->alarmEventMask());
 	value_log_mask|=(mrg->valueEventMask()|mrg->logEventMask());
 	value_mask|=mrg->valueEventMask();
+
+
+    prop_get_state = 1;
 }
 
 gatePvData::~gatePvData(void)
@@ -236,6 +242,7 @@ gatePvData::~gatePvData(void)
 	}
 	unmonitor();
 	logUnmonitor();
+	propUnmonitor();
 	alhUnmonitor();
 	status=ca_clear_channel(chID);
 	if(status != ECA_NORMAL) {
@@ -267,6 +274,7 @@ void gatePvData::initClear(void)
 	status=0;
 	markNotMonitored();
 	markLogNotMonitored();
+	markPropNotMonitored();
 	markNoCtrlGetPending();
 	markNoTimeGetPending();
 	markAlhNotMonitored();
@@ -396,8 +404,8 @@ int gatePvData::activate(gateVcData* vcd)
 		}
 		else{
 			markAddRemoveNeeded();
-			if(ca_read_access(chID)) rc=get(ctrlType);
-			else rc=0;
+            if (ca_read_access(chID)) rc = get(ctrlType);
+            else rc = 0;
 		}
 		break;
 	case gatePvDisconnect:
@@ -431,6 +439,7 @@ int gatePvData::deactivate(void)
 		gateDebug1(10,"gatePvData::deactivate() %s PV\n",getStateName());
 		unmonitor();
 		logUnmonitor();
+		propUnmonitor();
 		alhUnmonitor();
 		setState(gatePvInactive);
 #ifdef STAT_PVS
@@ -653,6 +662,7 @@ int gatePvData::death(void)
 	markNoTimeGetPending();
 	unmonitor();
 	logUnmonitor();
+	propUnmonitor();
 	alhUnmonitor();
 
 	return rc;
@@ -723,6 +733,41 @@ int gatePvData::logUnmonitor(void)
 	}
 	return rc;
 }
+
+int gatePvData::propUnmonitor(void)
+{
+	gateDebug1(5,"gatePvData::propUnmonitor() name=%s\n",name());
+	int rc=0;
+
+	if(propMonitored())
+	{
+#ifdef USE_313
+		rc=ca_clear_event(propID);
+		if(rc != ECA_NORMAL) {
+			fprintf(stderr,"%s gatePvData::propUnmonitor: ca_clear_event failed "
+			  "for %s:\n"
+			  " %s\n",
+			  timeStamp(),name()?name():"Unknown",ca_message(rc));
+		} else {
+			rc=0;
+		}
+#else
+		rc=ca_clear_subscription(propID);
+		if(rc != ECA_NORMAL) {
+			fprintf(stderr,"%s gatePvData::propUnmonitor: ca_clear_subscription failed "
+			  "for %s:\n"
+			  " %s\n",
+			  timeStamp(),name()?name():"Unknown",ca_message(rc));
+		} else {
+			rc=0;
+		}
+#endif
+		markPropNotMonitored();
+	}
+	return rc;
+}
+
+
 
 int gatePvData::alhUnmonitor(void)
 {
@@ -881,6 +926,68 @@ int gatePvData::logMonitor(void)
 	return rc;
 }
 
+int gatePvData::propMonitor(void)
+{
+    gateDebug1(5,"gatePvData::propMonitor() name=%s\n",name());
+    int rc=0;
+
+#if DEBUG_DELAY
+    if(!strncmp("Xorbit",name(),6)) {
+        printf("%s gatePvData::propMonitor: %s state=%d\n",timeStamp(),name(),
+          getState());
+    }
+#endif
+
+    if(!propMonitored())
+    {
+        // gets only 1 element:
+        // rc=ca_add_event(eventType(),chID,eventCB,this,&event);
+        // gets native element count number of elements:
+
+        if(ca_read_access(chID)) {
+            gateDebug1(5,"gatePvData::propMonitor() type=%ld\n",dataType());
+#ifdef USE_313
+            rc=ca_add_masked_array_event(dataType(),0,chID,::propEventCB,this,
+              0.0,0.0,0.0,&propID,DBE_PROPERTY);
+            if(rc != ECA_NORMAL) {
+                fprintf(stderr,"%s gatePvData::propMonitor: "
+                  "ca_add_masked_array_event failed for %s:\n"
+                  " %s\n",
+                  timeStamp(),name()?name():"Unknown",ca_message(rc));
+                rc=-1;
+            } else {
+                rc=0;
+               markpropMonitored();
+#if OMIT_CHECK_EVENT
+#else
+                checkEvent();
+#endif
+            }
+#else
+            rc=ca_create_subscription(dataType(),0,chID,DBE_PROPERTY,
+              ::propEventCB,this,&propID);
+            if(rc != ECA_NORMAL) {
+                fprintf(stderr,"%s gatePvData::propMonitor: "
+                  "ca_create_subscription failed for %s:\n"
+                  " %s\n",
+                  timeStamp(),name()?name():"Unknown",ca_message(rc));
+                rc=-1;
+            } else {
+                rc=0;
+                markPropMonitored();
+#if OMIT_CHECK_EVENT
+#else
+                checkEvent();
+#endif
+            }
+#endif
+        } else {
+            rc=-1;
+        }
+    }
+    return rc;
+}
+
 int gatePvData::alhMonitor(void)
 {
 	gateDebug1(5,"gatePvData::alhMonitor() name=%s\n",name());
@@ -948,7 +1055,7 @@ int gatePvData::get(readType read_type)
 		if(global_resources->getCacheMode()) /* caching enabled */
 		{
 			if(!pendingCtrlGet()) {
-				gateDebug0(3,"gatePvData::get() doing ca_array_get_callback\n");
+                gateDebug1(3,"gatePvData::get() CACHE doing ca_array_get_callback of type CTRL (%ld)\n",dataType());
 				setTransTime();
 				markCtrlGetPending();				
 				rc=ca_array_get_callback(dataType(), 1/*totalElements()*/,
@@ -969,7 +1076,7 @@ int gatePvData::get(readType read_type)
 				if(!pendingCtrlGet()) {
 					/*check if array is longer than available memory*/
 					if(global_resources->getMaxBytes() >= (unsigned long)(bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ))){
-						gateDebug0(3,"gatePvData::get() doing ca_array_get_callback of type CTRL\n");
+                        gateDebug1(3,"gatePvData::get() NO_CACHE doing ca_array_get_callback of type CTRL (%ld)\n",dataType());
 						setTransTime();
 						markCtrlGetPending();				
                         rc = ca_array_get_callback(dataType(), 0, chID, ::getCB, this);
@@ -983,8 +1090,9 @@ int gatePvData::get(readType read_type)
 					{
                       fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
 					  	"for %s.\n"
-                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %zu\n",
-					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ));
+                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
+                        timeStamp(),name()?name():"Unknown",
+                              (unsigned long) bytes*totalElements() + sizeof(caHdr) + 2*sizeof(ca_uint32_t));
 					}	
 				}				
 			}
@@ -993,7 +1101,7 @@ int gatePvData::get(readType read_type)
 				if(!pendingTimeGet()) {
 					/*check if array is longer than available memory*/
 					if(global_resources->getMaxBytes() >= (unsigned long)(bytes*totalElements()+sizeof(caHdr) + 2 * sizeof ( ca_uint32_t ))){
-						gateDebug0(3,"gatePvData::get() doing ca_array_get_callback of type TIME\n");
+                        gateDebug1(3,"gatePvData::get() NO_CACHE doing ca_array_get_callback of type TIME (%ld)\n", eventType());
 						setTransTime();
 						markTimeGetPending();	
                         rc = ca_array_get_callback(eventType(), 0, chID, ::getTimeCB, this);
@@ -1007,8 +1115,9 @@ int gatePvData::get(readType read_type)
 					{
                       fprintf(stderr,"%s gatePvData::get: EPICS_CA_MAX_ARRAY_BYTES too small "
 					  	"for %s.\n"
-                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %zu\n",
-					  	timeStamp(),name()?name():"Unknown",bytes*totalElements()+sizeof(caHdr)+2 * sizeof ( ca_uint32_t ));
+                        "Set EPICS_CA_MAX_ARRAY_BYTES to at least %lu\n",
+                        timeStamp(),name()?name():"Unknown",
+                              (unsigned long) bytes*totalElements() + sizeof(caHdr) + 2*sizeof(ca_uint32_t));
 					}
 				}						
 			}	
@@ -1063,7 +1172,7 @@ int gatePvData::put(const gdd & dd, class gateAsyncW * pWIO )
 
 #if DEBUG_GDD
 	printf("gatePvData::put(%s): at=%d pt=%d dbr=%ld ft=%ld[%s] name=%s\n",
-		   sPutCallback?"callback":"nocallback",
+           pWIO?"callback":"nocallback",
 		   dd.applicationType(),
 		   dd.primitiveType(),
 		   cht,
@@ -1337,6 +1446,7 @@ void gatePvData::connectCB(CONNECT_ARGS args)
 		gateDebug0(9,"gatePvData::connectCB() connection dead\n");
 		pv->death();
 	}
+    pv->mrg->conDelete(pv->name(), pv);
 }
 
 // This is the callback that is called when ca_array_put_callback is
@@ -1543,6 +1653,75 @@ void gatePvData::logEventCB(EVENT_ARGS args)
 	}
 }
 
+void gatePvData::propEventCB(EVENT_ARGS args)
+{
+    gatePvData* pv=(gatePvData*)ca_puser(args.chid);
+    gateDebug3(5,"gatePvData::propEventCB(gatePvData=%p)(gateVCData=%p) type=%d\n",
+      (void *)pv, (void*)pv->vc, (unsigned int)args.type);
+    gdd* dd;
+
+#ifdef RATE_STATS
+    ++pv->mrg->client_event_count;
+#endif
+
+#if DEBUG_BEAM
+    printf("gatePvData::propEventCB(): status=%d %s\n",
+      args.status,
+      pv->name());
+#endif
+
+#if DEBUG_DELAY
+    if(!strncmp("Xorbit",pv->name(),6)) {
+        printf("%s gatePvData::propEventCB: %s state=%d\n",timeStamp(),pv->name(),
+          pv->getState());
+    }
+#endif
+
+    if(args.status==ECA_NORMAL)
+    {
+        // only sends event_data and does ADD transactions
+        if(pv->active())
+        {
+            gateDebug2(5,"gatePvData::propEventCB() %s PV %d\n",pv->getStateName(), pv->propGetPending());
+            if(pv->propGetPending()) { 
+                gateDebug1(5,"gatePvData::propEventCB() Ignore first event %s PV\n",pv->getStateName());
+                pv->markPropNoGetPending();
+                return;
+            }
+
+            if ((dd = pv->runDataCB(&args)))  // Create the attributes gdd
+            {
+#if DEBUG_BEAM
+                printf("  dd=%p needAddRemove=%d\n", dd, pv->needAddRemove());
+#endif
+                // Update attribute cache
+                pv->vc->setPvData(dd);
+            }
+
+            if ((dd = pv->runValueDataCB(&args)))  // Create the value gdd
+            {
+#if DEBUG_BEAM
+                printf("  dd=%p needAddRemove=%d\n", dd, pv->needAddRemove());
+#endif
+                pv->vc->setEventData(dd);
+
+                if (pv->needAddRemove())
+                {
+                    gateDebug0(5,"gatePvData::propEventCB() need add/remove\n");
+                    pv->markAddRemoveNotNeeded();
+                    pv->vc->vcAdd(ctrlType);
+                }
+                else
+                {
+                    // Post the event
+                    pv->vc->vcPostEvent(pv->mrg->propertyEventMask());
+                }
+            }
+        }
+        ++(pv->event_count);
+    }
+}
+
 
 // This is the callback registered with ca_add_subscription in the
 // alhMonitor routine.  If conditions are right, it calls the routines
@@ -1594,109 +1773,91 @@ void gatePvData::alhCB(EVENT_ARGS args)
 
 void gatePvData::getCB(EVENT_ARGS args)
 {
-	gatePvData* pv=(gatePvData*)ca_puser(args.chid);
-	gateDebug1(5,"gatePvData::getCB(gatePvData=%p)\n",(void *)pv);
-	gdd* dd;
-	readType read_type = ctrlType;
+    gatePvData* pv=(gatePvData*)ca_puser(args.chid);
+    gateDebug1(5,"gatePvData::getCB(gatePvData=%p)\n",(void *)pv);
+    gdd* dd;
+    readType read_type = ctrlType;
 
 
 #ifdef RATE_STATS
-	++pv->mrg->client_event_count;
+    ++pv->mrg->client_event_count;
 #endif
 
 #if DEBUG_ENUM
-	printf("gatePvData::getCB\n");
+    printf("gatePvData::getCB\n");
 #endif
 
 #if DEBUG_DELAY
-	if(!strncmp("Xorbit",pv->name(),6)) {
-		printf("%s gatePvData::getCB: %s state=%d\n",timeStamp(),pv->name(),
-		  pv->getState());
-	}
+    if(!strncmp("Xorbit",pv->name(),6)) {
+        printf("%s gatePvData::getCB: %s state=%d\n",timeStamp(),pv->name(),
+               pv->getState());
+    }
 #endif
 
 
-	pv->markNoCtrlGetPending();
-	if(args.status==ECA_NORMAL)
-	{
-
-		if(pv->active())
-		{
-			gateDebug1(5,"gatePvData::getCB() %s PV\n",pv->getStateName());
+    pv->markNoCtrlGetPending();
+    if (pv->active()) {
+        if (args.status == ECA_NORMAL) {
+            gateDebug1(5,"gatePvData::getCB() %s PV\n",pv->getStateName());
+            // Update property cache with received property data
             dd = pv->runDataCB(&args);
             if (dd)
                 pv->vc->setPvData(dd);
-			
-			if(!global_resources->getCacheMode()) //we must set also value if only ctrl was requested from client
-			{
+        }
+
+        if (global_resources->getCacheMode()) {
+
+            // CACHING mode
+
+            gateDebug0(5,"gatePvData::getCB() [CACHE] Enable value monitor\n");
+            pv->monitor();
+            gateDebug0(5,"gatePvData::getCB() [CACHE] Enable property monitor\n");
+            pv->propMonitor();
+
+            if (pv->vc->needPosting() &&  // enable archive monitor only if in archive mode and requested
+                    global_resources->getArchiveMode() &&
+                    (pv->vc->client_mask == DBE_LOG)) {
+                gateDebug0(5,"gatePvData::getCB() [CACHE] Enable log monitor\n");
+                pv->logMonitor();
+            }
+
+        } else {
+
+            // NO CACHING mode
+
+            if (args.status == ECA_NORMAL) {
+                // Update value cache with received data
                 dd = pv->runValueDataCB(&args);
                 if (dd)
                     pv->vc->setEventData(dd);
-				
-				if(pv->needAddRemove() && !pv->vc->needPosting())
-				{
-					gateDebug0(5,"gatePvData::getCB() need add/remove\n");
-					pv->markAddRemoveNotNeeded();
-					pv->vc->vcAdd(read_type);
-				}
-				else
-					pv->vc->vcData(read_type);				
-				
-				if(pv->vc->needPosting() && !pv->monitored()) // do monitor only if requested
-				{
-					pv->monitor();
+            }
 
-				}
-				
-				if(pv->vc->needPosting() &&  // do archive monitor only if requested
-				   global_resources->getArchiveMode() &&
-				   !pv->logMonitored() &&
-				   (pv->vc->client_mask == DBE_LOG)) pv->logMonitor();	
-															
-			}
-			else
-			{
-				pv->monitor();//chacing enabled
-				
-				if(pv->vc->needPosting() &&  // do archive monitor only if requested
-				   global_resources->getArchiveMode() &&
-				   !pv->logMonitored() &&
-				   (pv->vc->client_mask == DBE_LOG)) pv->logMonitor();		 
-			}
+            if (pv->needAddRemove() && !pv->vc->needPosting()) {
+                gateDebug0(5,"gatePvData::getCB() need add/remove\n");
+                pv->markAddRemoveNotNeeded();
+                pv->vc->vcAdd(read_type);
+            } else
+                pv->vc->vcData(read_type);
 
-		}
-	}
-	else
-	{
-		// problems with the PV if status code not normal - attempt monitor
-		// should check if Monitor() fails and send remove trans if
-		// needed
-		if(pv->active())
-		{
-			if(global_resources->getCacheMode())//chacing enabled
-			{
-				pv->monitor();
-				if(pv->vc->needPosting() &&  // do archive monitor only if requested
-				   global_resources->getArchiveMode() &&
-				   !pv->logMonitored() &&
-				   (pv->vc->client_mask == DBE_LOG)) pv->logMonitor();	
-			}
-			else
-			{
-				if(pv->vc->needPosting())
-				{
-					pv->monitor();
-				}
-				
-				if(pv->vc->needPosting() &&  // do archive monitor only if requested
-				   global_resources->getArchiveMode() &&
-				   !pv->logMonitored() &&
-				   (pv->vc->client_mask == DBE_LOG)) pv->logMonitor();		
-									
-			}
-		}
-			
-	}
+            if (pv->vc->needPosting()) {  // enable monitor only if requested
+                gateDebug0(5,"gatePvData::getCB() [NO_CACHE] Enable value monitor\n");
+                pv->monitor();
+            }
+
+            if (pv->vc->needPosting() &&  // enable archive monitor only if in achive mode and requested
+                    global_resources->getArchiveMode() &&
+                    (pv->vc->client_mask == DBE_LOG)) {
+                gateDebug0(5,"gatePvData::getCB() [NO_CACHE] Enable log monitor\n");
+                pv->logMonitor();
+            }
+
+            if (pv->vc->needPosting() &&  // enable property monitor only if requested
+                    (pv->vc->client_mask == DBE_PROPERTY)) {
+                gateDebug0(5,"gatePvData::getCB() [NO_CACHE] Enable property monitor\n");
+                pv->propMonitor();
+            }
+        }
+    }
 }
 
 void gatePvData::getTimeCB(EVENT_ARGS args)
@@ -1752,8 +1913,17 @@ void gatePvData::getTimeCB(EVENT_ARGS args)
 			if(pv->vc->needPosting() &&  // do archive monitor only if requested
 			   global_resources->getArchiveMode() &&
 			   !pv->logMonitored() &&
-			    (pv->vc->client_mask == DBE_LOG)) pv->logMonitor();			
+			    (pv->vc->client_mask == DBE_LOG)) { 
+			        gateDebug0(5,"gatePvData::getCB() Starting log monitor timecb\n");
+                    pv->logMonitor();			
+                }
 
+			if(pv->vc->needPosting() &&  // do property monitor only if requested
+			   !pv->propMonitored() &&
+			    (pv->vc->client_mask == DBE_PROPERTY)) { 
+			        gateDebug0(5,"gatePvData::getCB() Starting prop monitor timecb\n");
+                    pv->propMonitor();			
+                }
 
 		}
 	}
@@ -2131,7 +2301,7 @@ gdd* gatePvData::eventDoubleCB(EVENT_ARGS * pArgs)
     aitIndex maxCount = totalElements();
 	gdd* value;
 
-	// DBR_TIME_FLOAT response
+    // DBR_TIME_DOUBLE response
 	// set up the value
     if (maxCount > 1)
 	{

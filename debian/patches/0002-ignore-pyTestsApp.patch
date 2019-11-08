@@ -1,0 +1,21 @@
+From: =?utf-8?q?Christoph_Schr=C3=B6der?=
+ <christoph.schroeder@helmholtz-berlin.de>
+Date: Thu, 19 May 2016 16:08:00 +0200
+Subject: ignore pyTestsApp
+
+---
+ testTop/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/testTop/Makefile b/testTop/Makefile
+index 78d0191..c99a93f 100644
+--- a/testTop/Makefile
++++ b/testTop/Makefile
+@@ -4,6 +4,7 @@ include $(TOP)/configure/CONFIG
+ DIRS := $(DIRS) $(filter-out $(DIRS), configure)
+ DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *App))
+ DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard iocBoot))
++DIRS := $(filter-out pyTestsApp, $(DIRS))
+ 
+ define DIR_template
+  $(1)_DEPEND_DIRS = configure

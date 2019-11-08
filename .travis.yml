@@ -1,0 +1,26 @@
+sudo: required
+dist: trusty
+language: cpp
+
+env:
+ - BASE=7.0
+ - BASE=7.0 STATIC=YES
+ - BASE=3.16
+ - BASE=3.16 STATIC=YES
+ - BASE=3.16 STATIC=YES EXTRA=CMD_CXXFLAGS=-std=c++11
+ - BASE=3.16 CMPLR=clang
+ - BASE=3.15
+ - BASE=3.15 STATIC=YES
+ - BASE=3.14
+ - BASE=3.14 STATIC=YES
+
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install python-nose
+
+install:
+ - sh .ci/travis-prepare.sh
+ - sudo pip install pyepics nose-tap
+
+script:
+ - sh .ci/travis-build.sh

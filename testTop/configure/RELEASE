@@ -23,7 +23,7 @@
 # If these tests are built in a directory under CA Gateway,
 # use the following definitions:
 
-GATEWAY = $(TOP)/..
+-include $(TOP)/../configure/RELEASE
 -include $(TOP)/../../RELEASE.local
 -include $(TOP)/../configure/RELEASE.local
 
@@ -33,5 +33,6 @@ GATEWAY = $(TOP)/..
 # in the appropriate RELEASE[.local],
 # and use the following definitions instead:
 
+#-include $(GATEWAY)/configure/RELEASE
 #-include $(TOP)/../RELEASE.local
 #-include $(TOP)/configure/RELEASE.local

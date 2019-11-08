@@ -1,12 +1,8 @@
-epics-cagateway (2.0.6.0-2) unstable; urgency=low
+epics-cagateway (2.0.6.0-2) UNRELEASED; urgency=medium
 
-  [ mdavidsaver ]
   * Add cagateway-ssh helper script for use with ssh port forwarding
 
-  [ Daron Chabot ]
-  * MNT: remove script
-
- -- Daron Chabot <chabot@frib.msu.edu>  Wed, 15 Nov 2017 11:12:37 -0500
+ -- mdavidsaver <mdavidsaver@gmail.com>  Thu, 29 Sep 2016 18:57:08 -0400
 
 epics-cagateway (2.0.6.0-1) unstable; urgency=medium
 

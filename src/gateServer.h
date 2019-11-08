@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 #ifndef _GATESERVER_H_
 #define _GATESERVER_H_
@@ -83,7 +83,7 @@ private:
 
 #if DEBUG_TIMES
 	static int count;
-#endif	
+#endif
 
 };
 #endif
@@ -105,7 +105,7 @@ private:
 # ifdef USE_FDS
 #  define statFd          9
 #  define NEXT_STAT_PV   10
-# else		     
+# else
 #  define NEXT_STAT_PV    9
 # endif
 #else
@@ -177,7 +177,7 @@ class gateRateStatsTimer : public epicsTimerNotify
 {
   public:
     gateRateStatsTimer(epicsTimerQueue &queue,
-      double intervalIn, gateServer *m) : 
+      double intervalIn, gateServer *m) :
       interval(intervalIn), startTime(epicsTime::getCurrent()),
       mrg(m), timer(queue.createTimer()) {}
     virtual expireStatus expire(const epicsTime &curTime);
@@ -237,7 +237,7 @@ public:
 	char* stat_prefix;
     size_t stat_prefix_len;
 	gateServerStats stat_table[statCount];
-#endif	
+#endif
 #ifdef STAT_PVS
 	unsigned long total_vc;
 	unsigned long total_pv;
@@ -256,7 +256,7 @@ public:
 	unsigned long client_event_count;
 	unsigned long post_event_count;
 	unsigned long loop_count;
-#endif	
+#endif
 
 	// CAS application management functions
 	void checkEvent(void);
@@ -328,7 +328,7 @@ private:
 	static volatile unsigned long newAs_flag;
 	static volatile unsigned long quit_flag;
 	static volatile unsigned long quitserver_flag;
-	
+
 public:
 #ifndef _WIN32
 	static void sig_usr1(int);

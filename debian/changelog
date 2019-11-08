@@ -1,3 +1,9 @@
+epics-cagateway (2.1.2.0-1) unstable; urgency=low
+
+  * Imported Upstream version 2.1.2.0
+
+ -- Anton Derbenev <aderbenev@bnl.gov>  Fri, 08 Nov 2019 15:48:19 -0500
+
 epics-cagateway (2.1.1.0-1) unstable; urgency=medium
 
   * add cagateway-ssh script with quilt 3.0 compliant patch

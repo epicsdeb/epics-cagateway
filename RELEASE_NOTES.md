@@ -1,10 +1,22 @@
 CA Gateway Release Notes
 ========================
 
-## 2.1.2 (not released yet)
-[View diff](https://github.com/epics-extensions/ca-gateway/compare/R2-1-1-0...master)
+## 2.1.3 (not released yet)
+[View diff](https://github.com/epics-extensions/ca-gateway/compare/R2-1-2-0...master)
 
 * Ehhh...
+
+## 2.1.2 (25 Oct 2019)
+[View diff](https://github.com/epics-extensions/ca-gateway/compare/R2-1-1-0...R2-1-2-0)
+
+* Crash reported and fixed by Diamond (on MAX_ARRAY_BYTES mismatch).
+* Improve handling of DBR_CTRL requests.
+* Remove support for EPICS Base 3.13, Solaris
+* Improve tests, make them compatible with python3
+* Properly depend on PCAS for EPICS 7 builds
+* Update to support caPutLog >= 3.5 (older versions not supported)
+* Add support for 64bit integers
+* Raise PV name length limit to 256 characters
 
 ## 2.1.1 (17 Oct 2018)
 [View diff](https://github.com/epics-extensions/ca-gateway/compare/R2-1-0-0...R2-1-1-0)

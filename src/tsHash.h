@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 /* Author: Jim Kowalkowski
  * Date: 7/96 */
@@ -38,7 +38,7 @@ public:
 	{
 		gphFreeMem(hash_table);
 	}
-		 
+
 	int add(const char* key, T& item)
 	{
 		GPHENTRY* entry;

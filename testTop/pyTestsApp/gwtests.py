@@ -47,16 +47,16 @@ def setup():
     elif 'T_A' in os.environ:
         hostArch = os.environ['T_A']
     else:
-        print "Warning: EPICS_HOST_ARCH not set. Using default value of '{0}'".format(hostArch)
+        print("Warning: EPICS_HOST_ARCH not set. Using default value of '{0}'".format(hostArch))
 
     if 'TOP' in os.environ:
         gwLocation = os.path.join(os.environ['TOP'], '..')
     else:
-        print "Warning: TOP not set. Using default value of '..'"
+        print("Warning: TOP not set. Using default value of '..'")
 
     gwExecutable = os.path.join(gwLocation, 'bin', hostArch, 'gateway')
     if not os.path.exists(gwExecutable):
-        print "Cannot find the gateway executable at", gwExecutable
+        print("Cannot find the gateway executable at", gwExecutable)
         sys.exit(1)
 
     if 'IOC_EPICS_BASE' in os.environ:
@@ -64,4 +64,4 @@ def setup():
     elif 'EPICS_BASE' in os.environ:
         iocExecutable = os.path.join(os.environ['EPICS_BASE'], 'bin', hostArch, 'softIoc')
     else:
-        print "Warning: IOC_EPICS_BASE or EPICS_BASE not set. Running 'softIoc' executable in PATH"
+        print("Warning: IOC_EPICS_BASE or EPICS_BASE not set. Running 'softIoc' executable in PATH")

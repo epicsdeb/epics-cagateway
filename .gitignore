@@ -9,6 +9,7 @@ html/
 envPaths
 QtC-*
 *.orig
+__pycache__
 
 # Gateway generated scriptlets
 gateway.killer

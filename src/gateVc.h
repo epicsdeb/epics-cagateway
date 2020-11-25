@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 #ifndef _GATEVC_H_
 #define _GATEVC_H_
@@ -83,7 +83,7 @@ public:
     // implemented in base.
 	virtual void setOwner(const char * const user, const char * const host);
 #endif
-	
+
 	void report(FILE *fp);
 
 	const char *getUser(void) const { return user; };
@@ -93,12 +93,12 @@ public:
 	gateAsClient *getAsClient(void) const { return asclient; }
 	void deleteAsClient(void);
 	void resetAsClient(gateAsEntry *asentry);
-	
+
 	void setCasPv(casPV *casPvIn) { casPv=casPvIn; }
 
 	static void post_rights(void *userPvt);
 
-protected:	
+protected:
 	casPV *casPv;
 	gateAsClient *asclient; // Must be deleted when done using it
 	const char *user;
@@ -199,7 +199,7 @@ public:
 	void setAlhTransTime(void);
 	time_t timeSinceLastAlhTrans(void) const;
 #endif
-	
+
 	int needPosting(void);
 	int needInitialPosting(void);
 	void markInterested(void);
@@ -209,9 +209,9 @@ public:
 
 	casEventMask select_mask;
 	casEventMask alh_mask;
-	
+
 	ca_uint16_t client_mask;
-	
+
 protected:
 	void setState(gateVcState s) { pv_state=s; }
 	gatePvData* pv;     // Pointer to the associated gatePvData
@@ -242,6 +242,7 @@ private:
 	// The state of the process variable is kept in these two gdd's
 	gdd* pv_data;     // Filled in by gatePvData::getCB on activation
 	gdd* event_data;  // Filled in by gatePvData::eventCB on channel change
+	unsigned highestGddAppType;
 	caStatus writeSpecifyingCBMechanism(const casCtx &ctx, 
 		const gdd &value, bool isPutNotify );
 	static const unsigned maxSimlWriteIO = 100u;

@@ -1,3 +1,17 @@
+epics-cagateway (2.1.2-1) unstable; urgency=medium
+
+  [ Daron Chabot ]
+  * MNT: remove script
+  * BLD: bump version to 2.0.6.0-2
+
+  [ Anton Derbenev ]
+  * Revert "MNT: remove script"
+
+  [ Martin Konrad ]
+  * New upstream version 2.1.2
+
+ -- Martin Konrad <konrad@frib.msu.edu>  Wed, 25 Nov 2020 09:24:41 -0500
+
 epics-cagateway (2.1.1.0-1) unstable; urgency=medium
 
   * add cagateway-ssh script with quilt 3.0 compliant patch

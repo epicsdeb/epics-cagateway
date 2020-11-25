@@ -66,6 +66,7 @@ class TestEnumPropertyCache(unittest.TestCase):
         a = 1
 
 
+    @unittest.skip("detects CAS bug lp:1510955 which is not fixed yet")
     def testEnumPropCache_ValueMonitorCTRLget(self):
         '''Monitor PV (value events) through GW - change ENUM string directly - get the DBR_CTRL of the PV through GW'''
         # gateway should show no VC (client side connection) and no PV (IOC side connection)
@@ -120,6 +121,7 @@ class TestEnumPropertyCache(unittest.TestCase):
         self.assertTrue(oneStr == gw_expected, "Expected GW enum[1]: {0}; actual enum[1]: {1}".format(gw_expected, oneStr))
 
 
+    @unittest.skip("detects CAS bug lp:1510955 which is not fixed yet")
     def testEnumPropCache_ValueGetCTRLGet(self):
         '''Get PV (value) through GW - change ENUM string directly - get the DBR_CTRL of the PV through GW'''
         # gateway should show no VC (client side connection) and no PV (IOC side connection)

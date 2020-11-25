@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 #ifndef _GATEVERSION_H_
 #define _GATEVERSION_H_
@@ -26,10 +26,13 @@
 
 #define GATEWAY_VERSION       2
 #define GATEWAY_REVISION      1
-#define GATEWAY_MODIFICATION  1
-#define GATEWAY_UPDATE_LEVEL  0
+#define GATEWAY_MODIFICATION  2
+#define GATEWAY_DEV_SNAPSHOT  ""
 
-#define GATEWAY_VERSION_STRING "PV Gateway Version 2.1.1"
+#define stringOf(TOKEN) #TOKEN
+#define GATEWAY_VERSION_STRING "PV Gateway Version " \
+    stringOf(GATEWAY_VERSION) "." stringOf(GATEWAY_REVISION) "." \
+    stringOf(GATEWAY_MODIFICATION) GATEWAY_DEV_SNAPSHOT
 
 #define GATEWAY_CREDITS_STRING  \
           "Originally developed at Argonne National Laboratory and BESSY\n\n" \

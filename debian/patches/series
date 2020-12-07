@@ -1,2 +1,3 @@
 0001-add-cagateway-ssh-script.patch
 0002-ignore-pyTestsApp.patch
+0003-Fix-issues-with-caPutLog-support.patch

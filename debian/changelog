@@ -1,3 +1,9 @@
+epics-cagateway (2.1.2-2) unstable; urgency=medium
+
+  * Build with caputlog support
+
+ -- Martin Konrad <konrad@frib.msu.edu>  Mon, 07 Dec 2020 13:40:52 -0500
+
 epics-cagateway (2.1.2-1) unstable; urgency=medium
 
   [ Daron Chabot ]

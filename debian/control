@@ -5,6 +5,7 @@ Maintainer: Martin Konrad <konrad@frib.msu.edu>
 Build-Depends: debhelper (>= 10), epics-debhelper (>= 8.10~),
                epics-dev (>= 3.15.1-1~),
                epics-pcas-dev (>= 3.15.1-1~),
+               epics-caputlog-dev (>= 3.4~),
 Standards-Version: 4.3.0
 Homepage: http://www.aps.anl.gov/epics/extensions/gateway/index.php
 Vcs-Git: https://github.com/epicsdeb/epics-cagateway.git

@@ -5,7 +5,7 @@ Source: http://launchpad.net/epics-gateway
 Files: *
 Copyright: (c) 2002 University of Chicago.
            (c) 2002 Berliner Speicherring-Gesellschaft für Synchrotronstrahlung mbH (BESSY).
-License: EPICS License
+License: EPICS
  All rights reserved.
  .
  The gateway is distributed subject to the following license conditions:

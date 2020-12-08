@@ -1,8 +1,11 @@
-From 93161d6801b5785b668cf871a9aef5506e7a2203 Mon Sep 17 00:00:00 2001
 From: Michael Davidsaver <mdavidsaver@gmail.com>
 Date: Thu, 29 Sep 2016 18:58:25 -0400
 Subject: add cagateway-ssh script
 
+---
+ cagateway-ssh | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+ create mode 100755 cagateway-ssh
 
 diff --git a/cagateway-ssh b/cagateway-ssh
 new file mode 100755

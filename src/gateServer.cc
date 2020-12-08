@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 
 /*+*********************************************************************
@@ -89,11 +89,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
-#ifdef SOLARIS
-// Is in stdlib.h elsewhere, not available on WIN32
-#include <sys/loadavg.h>
-#endif
 
 #ifdef _WIN32
 #else
@@ -246,7 +241,7 @@ void gateServer::mainLoop(void)
 #if defined(RATE_STATS) || defined(CAS_DIAGNOSTICS)
 	// Start a default timer queue (true to use shared queue, false to
 	// have a private one)
-	epicsTimerQueueActive &queue = 
+	epicsTimerQueueActive &queue =
 	  epicsTimerQueueActive::allocate(true);
 	gateRateStatsTimer *statTimer = new gateRateStatsTimer(queue,
 	  RATE_STATS_INTERVAL, this);
@@ -324,7 +319,7 @@ void gateServer::mainLoop(void)
 			cleanTime=0.0;
 		}
 #endif
-		
+
 		// Make sure messages get out
 		fflush(stderr); fflush(stdout);
 
@@ -379,7 +374,7 @@ void gateServer::mainLoop(void)
 				} else {
 					exit(0);
 				}
-#endif				
+#endif
 			} else {
 				// Doesn't have a server, just quit
 				exit(0);
@@ -427,11 +422,7 @@ void gateServer::gateCommands(const char* cfile)
 		printf("%s Reading command file: %s\n",timeStamp(),cfile);
 
 		errno=0;
-#ifdef RESERVE_FOPEN_FD
-		fp=global_resources->fopen(cfile,"r");
-#else
 		fp=fopen(cfile,"r");
-#endif
 		if(fp == NULL)	{
 			fprintf(stderr,"%s Failed to open command file: %s\n",
 			  timeStamp(),cfile);
@@ -459,14 +450,7 @@ void gateServer::gateCommands(const char* cfile)
 			cmd=strtok(NULL," \t\n");
 		}
 	}
-
-	// Free the reserved file descriptor before we read access
-	// security or write reports
-#ifdef RESERVE_FOPEN_FD
-	global_resources->fclose(fp);
-#else
 	fclose(fp);
-#endif
 
 	// Now do the commands
 	if(r1Flag) {
@@ -479,7 +463,7 @@ void gateServer::gateCommands(const char* cfile)
 	}
 	if(asFlag) {
 		printf("%s Reading access security files\n",timeStamp());
-		newAs();	
+		newAs();
 		fflush(stdout);
 	}
 	// Do the report after the new access security
@@ -487,7 +471,7 @@ void gateServer::gateCommands(const char* cfile)
 		report3();
 		fflush(stdout);
 	}
-	
+
 	return;
 }
 
@@ -502,7 +486,7 @@ void gateServer::newAs(void)
 	printf("gateServer::newAs pv_list: %d con_list: %d\n",
 	  (int)pv_list.count(),(int)pv_con_list.count());
 	int count=0;
-#endif	
+#endif
 
 	// We need to eliminate all the members (gateAsEntry's) and
 	// clients (gateAsClient's).  The clients must be removed before
@@ -545,7 +529,7 @@ void gateServer::newAs(void)
 		if(!stat_table[i].pv) {
 #if DEBUG_ACCESS
 			printf("  i=%d No pv for %s\n",i,stat_table[i].name);
-#endif	
+#endif
 		}  else {
 			// NULL the entry in the gateStat and its channels and delete
 			// the gateAsClients
@@ -559,7 +543,7 @@ void gateServer::newAs(void)
 		if(!stat_table[i].descPv) {
 #if DEBUG_ACCESS
 			printf("  i=%d No descPv for %s\n",i,stat_table[i].name);
-#endif	
+#endif
 		}  else {
 			// NULL the entry in the gateStat and its channels and delete
 			// the gateAsClients
@@ -595,16 +579,16 @@ void gateServer::newAs(void)
 			gatePvData *pv=pNode->getData();
 			tsDLIter<gatePvNode> tmpIter = iter;
 			tmpIter++;
-			
+
 #if DEBUG_ACCESS
 			printf("  i=%d count=%d %s\n",i,count,pv->name()?pv->name():"NULL");
-#endif	
+#endif
 			// See if it is allowed
 			pEntry=getAs()->findEntry(pv->name());
 			if(!pEntry) {
 #if DEBUG_ACCESS
 				printf("    Not allowed\n");
-#endif	
+#endif
 				// Denied, kill it (handles statistics) then remove it
 				// now, rather than leaving it for inactiveDeadCleanup
 				pv->death();
@@ -616,7 +600,7 @@ void gateServer::newAs(void)
 			} else {
 #if DEBUG_ACCESS
 				printf("    Allowed\n");
-#endif	
+#endif
 				// Allowed, replace gateAsEntry
 				pv->resetEntry(pEntry);
 				// Replace the entry in the gateVcData and its channels
@@ -636,7 +620,7 @@ void gateServer::newAs(void)
 		if(!stat_table[i].pv) {
 #if DEBUG_ACCESS
 			printf("  i=%d No pv for %s\n",i,stat_table[i].name);
-#endif	
+#endif
 		} else {
 			// Replace the entry in the gateStat and its channels
 #if DEBUG_ACCESS
@@ -657,7 +641,7 @@ void gateServer::newAs(void)
 		if(!stat_table[i].descPv) {
 #if DEBUG_ACCESS
 			printf("  i=%d No descPv for %s\n",i,stat_table[i].name);
-#endif	
+#endif
 		} else {
 			// Replace the entry in the gateStat and its channels
 #if DEBUG_ACCESS
@@ -698,11 +682,7 @@ void gateServer::report1(void)
 		printf("  Report1: Bad report filename\n");
 		return;
 	}
-#ifdef RESERVE_FOPEN_FD
-	fp=global_resources->fopen(filename,"a");
-#else
 	fp=fopen(filename,"a");
-#endif
 	if(!fp) {
 		printf("  Report1: Cannot open %s for appending\n",filename);
 		return;
@@ -728,12 +708,8 @@ void gateServer::report1(void)
 	}
 	fprintf(fp,"---------------------------------------"
 	  "------------------------------------\n");
-#ifdef RESERVE_FOPEN_FD
-	global_resources->fclose(fp);
-#else
 	fclose(fp);
-#endif
-	
+
 	printf("  Report1 written to %s\n",filename);
 }
 
@@ -761,11 +737,7 @@ void gateServer::report2(void)
 		printf("  Report2: Bad report filename\n");
 		return;
 	}
-#ifdef RESERVE_FOPEN_FD
-	fp=global_resources->fopen(filename,"a");
-#else
 	fp=fopen(filename,"a");
-#endif
 	if(!fp) {
 		printf("  Report2: Cannot open %s for appending\n",filename);
 		return;
@@ -822,7 +794,7 @@ void gateServer::report2(void)
 				  pEntry->pattern?pEntry->pattern:"None");
 			} else {
 				fprintf(fp,"\n");
-				
+
 			}
 		}
 	}
@@ -864,7 +836,7 @@ void gateServer::report2(void)
 		}
 		iter++;
 	}
-	
+
 	fprintf(fp,"\nDead PVs [DEA]:\n"
 	  " State Name                            Time         Group        Level Pattern\n");
 	iter=pv_list.firstIter();
@@ -955,12 +927,8 @@ void gateServer::report2(void)
 
 	fprintf(fp,"---------------------------------------"
 	  "------------------------------------\n");
-#ifdef RESERVE_FOPEN_FD
-	global_resources->fclose(fp);
-#else
 	fclose(fp);
-#endif
-	
+
 	printf("  Report2 written to %s\n",filename);
 }
 
@@ -977,11 +945,7 @@ void gateServer::report3(void)
 		printf("  Report3: Bad report filename\n");
 		return;
 	}
-#ifdef RESERVE_FOPEN_FD
-	fp=global_resources->fopen(filename,"a");
-#else
 	fp=fopen(filename,"a");
-#endif
 	if(!fp) {
 		printf("  Report3: Cannot open %s for appending\n",filename);
 		return;
@@ -989,12 +953,8 @@ void gateServer::report3(void)
 
 	as->report(fp);
 
-#ifdef RESERVE_FOPEN_FD
-	global_resources->fclose(fp);
-#else
 	fclose(fp);
-#endif
-	
+
 	printf("  Report3 written to %s\n",filename);
 }
 
@@ -1042,8 +1002,8 @@ void gateFd::callBack(void)
 #ifdef USE_FDS
 #if DEBUG_TIMES
 int gateFd::count(0);
-#endif	
-#endif	
+#endif
+#endif
 
 // ----------------------- server methods --------------------
 
@@ -1067,24 +1027,16 @@ gateServer::gateServer(char *prefix ) :
 	last_inactive_cleanup(time(NULL)),
 	last_connect_cleanup(time(NULL)),
 	last_beacon_time(time(NULL)),
-	suppressed_refresh_flag(0)	
+	suppressed_refresh_flag(0)
 {
 	gateDebug0(5,"gateServer()\n");
 
 	// Initialize channel access
-#ifdef USE_313
-	int status=ca_task_initialize();
-	if(status != ECA_NORMAL) {
-	    fprintf(stderr,"%s gateServer::gateServer: ca_task_initialize failed:\n"
-		  " %s\n",timeStamp(),ca_message(status));
-	}
-#else
 	int status=ca_context_create(ca_disable_preemptive_callback);
 	if(status != ECA_NORMAL) {
 	    fprintf(stderr,"%s gateServer::gateServer: ca_context_create failed:\n"
 		  " %s\n",timeStamp(),ca_message(status));
 	}
-#endif
 #ifdef USE_FDS
 	status=ca_add_fd_registration(::fdCB,this);
 	if(status != ECA_NORMAL) {
@@ -1114,7 +1066,7 @@ gateServer::gateServer(char *prefix ) :
 #if 0
 // Jeff did not implement setting counts
 	setEventsProcessed(0);
-	setEventsPosted(0);	
+	setEventsPosted(0);
 #endif
 #endif
 #endif
@@ -1169,15 +1121,7 @@ gateServer::~gateServer(void)
 	    fprintf(stderr,"%s gateServer::~gateServer: ca_flush_io failed:\n"
 		  " %s\n",timeStamp(),ca_message(status));
 	}
-#ifdef USE_313
-	status=ca_task_exit();
-	if(status != ECA_NORMAL) {
-	    fprintf(stderr,"%s gateServer::~gateServer: ca_task_exit failed:\n"
-		  " %s\n",timeStamp(),ca_message(status));
-	}
-#else
 	ca_context_destroy();
-#endif
 }
 
 void gateServer::checkEvent(void)
@@ -1258,7 +1202,7 @@ void gateServer::exCB(EXCEPT_ARGS /*args*/)
 
 	// Handle these cases with less output and no limits since they
 	// are common
-	
+
 	// Virtual circuit disconnect
 	// Virtual circuit unresponsive
 	if (args.stat == ECA_DISCONN || args.stat == ECA_UNRESPTMO) {
@@ -1332,7 +1276,7 @@ void gateServer::connectCleanup(void)
 	gateDebug0(51,"gateServer::connectCleanup()\n");
 	gatePvData* pv;
 
-	if(global_resources->connectTimeout()>0 && 
+	if(global_resources->connectTimeout()>0 &&
 	   timeConnectCleanup()<global_resources->connectTimeout())
 		return;
 
@@ -1340,8 +1284,8 @@ void gateServer::connectCleanup(void)
 	unsigned long pos=1;
 	unsigned long total=pv_con_list.count();
 #endif
-	
-#if DEBUG_PV_CONNNECT_CLEANUP 
+
+#if DEBUG_PV_CONNNECT_CLEANUP
 	printf("\ngateServer::connectCleanup: "
 	  "timeConnectCleanup=%ld timeDeadCheck=%ld\n"
 	  "  timeInactiveCheck=%ld elapsedTime=%ld\n",
@@ -1554,11 +1498,11 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 	// deny_from_list is used
 	if(getAs()->isDenyFromListUsed()) {
 		char hostname[GATE_MAX_HOSTNAME_LENGTH];
-		
+
 		// Get the hostname and check if it is allowed
 		//getClientHostName(ctx, hostname, sizeof(hostname));
 		//clientAddress.stringConvert(hostname, sizeof(hostname))
-		
+
 		struct sockaddr_in sockAdd	= clientAddress.getSockIP();
 		struct sockaddr_in* pSockAdd;
 		pSockAdd = &sockAdd;
@@ -1566,9 +1510,9 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 		ipAddrToDottedIP(pSockAdd,hostname,sizeof(hostname));
 		char * ch;
 		ch=strchr(hostname,':');
-		if(ch != NULL) hostname[ch-hostname]=0;			
-		
-				
+		if(ch != NULL) hostname[ch-hostname]=0;
+
+
 		// See if requested name is allowed and check for aliases
 		if ( !(pEntry = getAs()->findEntry(pvname, hostname)) )
 		{
@@ -1629,7 +1573,7 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 				  pEntry->pattern?pEntry->pattern:"NULL",
 				  pEntry->alias?pEntry->alias:"NULL",
 				  pEntry->group?pEntry->group:"NULL");
-				printf("  pverExistsHere\n"); 
+				printf("  pverExistsHere\n");
 #endif
 #if DEBUG_FDMGR
 				endTime=epicsTime::getCurrent();
@@ -1639,7 +1583,7 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 			}
 			if(strcmp(real_name,stat_table[i].descPvName)==0) {
 #if DEBUG_DESC
-				printf("  pverExistsHere\n"); 
+				printf("  pverExistsHere\n");
 #endif
 #if DEBUG_FDMGR
 				endTime=epicsTime::getCurrent();
@@ -1722,7 +1666,7 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 			  timeStamp(),loop_count,pvname);
 		}
 #endif
-		
+
 		switch(pv->getState())
 		{
 		case gatePvConnect:
@@ -1744,16 +1688,16 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 			break;
 		}
 	}
-	
+
 #if DEBUG_DELAY
 	if(rc.getStatus() == pverAsyncCompletion) {
 		printf("  pverAsyncCompletion\n");
 	} else if(rc.getStatus() == pverExistsHere) {
-		printf("  pverExistsHere\n"); 
+		printf("  pverExistsHere\n");
 	} else if(rc.getStatus() == pverDoesNotExistHere) {
-		printf("  pverDoesNotExistHere\n"); 
+		printf("  pverDoesNotExistHere\n");
 	} else {
-		printf("  Other return code\n"); 
+		printf("  Other return code\n");
 	}
 #endif
 #if DEBUG_HISTORY
@@ -1761,15 +1705,15 @@ pvExistReturn gateServer::pvExistTest(const casCtx& ctx, const char* pvname)
 		if(rc.getStatus() == pverAsyncCompletion) {
 			printf("  pverAsyncCompletion\n");
 		} else if(rc.getStatus() == pverExistsHere) {
-			printf("  pverExistsHere\n"); 
+			printf("  pverExistsHere\n");
 		} else if(rc.getStatus() == pverDoesNotExistHere) {
-			printf("  pverDoesNotExistHere\n"); 
+			printf("  pverDoesNotExistHere\n");
 		} else {
-			printf("  Other return code\n"); 
+			printf("  Other return code\n");
 		}
 	}
 #endif
-	
+
 #if DEBUG_FDMGR
 	endTime=epicsTime::getCurrent();
 	cumTime+=(endTime-startTime);
@@ -1825,7 +1769,7 @@ pvAttachReturn gateServer::pvAttach(const casCtx& /*c*/,const char* pvname)
 		  timeStamp(),loop_count,real_name);
 	}
 #endif
-	
+
 	// See if we have a gateVcData
 	if(vcFind(real_name,rc) < 0)
 	{
@@ -1901,7 +1845,7 @@ caStatus gateServer::processStat(int type, double val)
 		retVal=S_casApp_noSupport;
 		break;
     }
-	
+
 #if DEBUG_PROCESS_STAT
     print("gateServer::processStat:\n"
       "val=%.2f nCheck=%d nPrint=%d nSigma=%d nLimit=%.2f\n",
@@ -2268,7 +2212,7 @@ gateRateStatsTimer::expire(const epicsTime &curTime)
 	mrg->setStat(statLoad,load[N_LOAD-1]);
 #endif
 #endif
-	
+
 #ifdef CAS_DIAGNOSTICS
 	// Calculate the server event rate
 	seRate=(delTime > 0)?(double)(ULONG_DIFF(seCurCount,sePrevCount))/

@@ -1,0 +1,369 @@
+From: Freddie Akeroyd <freddie.akeroyd@stfc.ac.uk>
+Date: Sun, 15 Dec 2019 17:48:37 +0000
+Subject: Fix issues with caPutLog support
+
+* Add better mapping to dbFlfTypes.h definitions
+* use localally defined VALUE_to_string()
+* Fix expansion of gateway version preprocessor macros for WIN32
+---
+ src/Makefile         |   1 +
+ src/gateDbFld.cc     |  20 ++++++
+ src/gateDbFld.h      |  24 +++++++
+ src/gateResources.cc | 191 +++++++++++++++++++--------------------------------
+ src/gateVersion.h    |   5 +-
+ 5 files changed, 119 insertions(+), 122 deletions(-)
+ create mode 100644 src/gateDbFld.cc
+ create mode 100644 src/gateDbFld.h
+
+diff --git a/src/Makefile b/src/Makefile
+index be48017..60f9c82 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -63,6 +63,7 @@ gateway_SRCS += gateVc.cc
+ gateway_SRCS += gateAsyncIO.cc
+ gateway_SRCS += gateAsCa.cc
+ gateway_SRCS += gateStat.cc
++gateway_SRCS += gateDbFld.cc
+ 
+ # HACK: Needs access to private CAS header casCtx.h
+ USR_INCLUDES += -I$(EPICS_BASE)/src/cas/generic
+diff --git a/src/gateDbFld.cc b/src/gateDbFld.cc
+new file mode 100644
+index 0000000..9ce6eac
+--- /dev/null
++++ b/src/gateDbFld.cc
+@@ -0,0 +1,20 @@
++// caPutLog uses dbFldTypes.h for DBR_xxx types, but gateway uses db_access.h elsewhere
++// so we provide a mapping here to avoid a name clash
++
++#include <dbFldTypes.h>
++#include "gateDbFld.h"
++
++const int DBFLD::D_STRING = DBR_STRING;
++const int DBFLD::D_CHAR = DBR_CHAR;
++const int DBFLD::D_UCHAR = DBR_UCHAR;
++const int DBFLD::D_SHORT = DBR_SHORT;
++const int DBFLD::D_USHORT = DBR_USHORT;
++const int DBFLD::D_LONG = DBR_LONG;
++const int DBFLD::D_ULONG = DBR_ULONG;
++#ifdef DBR_INT64
++const int DBFLD::D_INT64 = DBR_INT64;
++const int DBFLD::D_UINT64 = DBR_UINT64;
++#endif
++const int DBFLD::D_FLOAT = DBR_FLOAT;
++const int DBFLD::D_DOUBLE = DBR_DOUBLE;
++const int DBFLD::D_ENUM = DBR_ENUM;
+diff --git a/src/gateDbFld.h b/src/gateDbFld.h
+new file mode 100644
+index 0000000..33860de
+--- /dev/null
++++ b/src/gateDbFld.h
+@@ -0,0 +1,24 @@
++#ifndef _GATEDBFLD_H_
++#define _GATEDBFLD_H_
++
++struct DBFLD
++{
++    static const int D_STRING;
++    static const int D_CHAR;
++    static const int D_UCHAR;
++    static const int D_SHORT;
++    static const int D_USHORT;
++    static const int D_LONG;
++    static const int D_ULONG;
++// db_access.h does not define DBR_INT64 and channel access sends int64 as a double
++// so these are not currently used in the gateway
++#ifdef DBR_INT64
++    static const int D_INT64;
++    static const int D_UINT64;
++#endif
++    static const int D_FLOAT;
++    static const int D_DOUBLE;
++    static const int D_ENUM;
++};
++
++#endif /* _GATEDBFLD_H_ */
+diff --git a/src/gateResources.cc b/src/gateResources.cc
+index 369ffe5..ca4d6f1 100644
+--- a/src/gateResources.cc
++++ b/src/gateResources.cc
+@@ -35,9 +35,12 @@
+ #endif
+ 
+ #include "cadef.h"
++#include "epicsStdio.h"
+ 
+ #include "gateResources.h"
+ #include "gateAs.h"
++#include "gateDbFld.h"
++
+ #include <gddAppTable.h>
+ #include <dbMapper.h>
+ 
+@@ -100,7 +103,10 @@ char *getComputerName(void)
+ 		// Convert to lowercase and copy
+ 		// OK for ANSI.  Won't work for Unicode w/o conversion.
+ 		char *pChar=computerName;
+-		while(*pChar) *pChar=tolower(*pChar++);
++		while (*pChar) {
++			*pChar = tolower(*pChar);
++			++pChar;
++		}
+ 		name=strDup(computerName);
+ 	}
+ #else
+@@ -115,173 +121,118 @@ char *getComputerName(void)
+ }
+ 
+ #ifdef WITH_CAPUTLOG
+-/*
+-  We need to define these here, as caPutLog is using dbFldTypes.h defs for
+-  DBR_xxx and our code is loading db_access.h defs elsewhere, and thse ARE
+-  DIFFERENT.
+-
+-  DBR_FLOAT in db_access.h is 6, for example but in dbFldTypes.h that means a
+-  DBR_ULONG.
+-*/
+-#define OUR_DBR_STRING   0
+-#define OUR_DBR_CHAR     1
+-#define OUR_DBR_UCHAR    2
+-#define OUR_DBR_SHORT    3
+-#define OUR_DBR_USHORT   4
+-#define OUR_DBR_LONG     5
+-#define OUR_DBR_ULONG    6
+-#define OUR_DBR_FLOAT    7
+-#define OUR_DBR_DOUBLE   8
++
++// caPutLog uses dbFldTypes.h whereas elsewhere in the gateway uses  db_access.h
++// and the DBR_xxx codes ARE DIFFERENT. We access the dbFldTypes numbers here via
++// a mapping in DBFLD:: to avoid clash with db_access.h definitions
+ 
+ static int gddGetOurType(const gdd *gddVal)
+ {
+   switch ( gddVal->primitiveType() ) {
+-    case aitEnumInt8    : return(OUR_DBR_CHAR);
+-    case aitEnumUint8   : return(OUR_DBR_UCHAR);
+-    case aitEnumInt16   : return(OUR_DBR_SHORT);
+-    case aitEnumEnum16  : return(OUR_DBR_USHORT);
+-    case aitEnumUint16  : return(OUR_DBR_USHORT);
+-    case aitEnumInt32   : return(OUR_DBR_LONG);
+-    case aitEnumUint32  : return(OUR_DBR_ULONG);
+-    case aitEnumFloat32 : return(OUR_DBR_FLOAT);
+-    case aitEnumFloat64 : return(OUR_DBR_DOUBLE);
++    case aitEnumInt8    : return(DBFLD::D_CHAR);
++    case aitEnumUint8   : return(DBFLD::D_UCHAR);
++    case aitEnumInt16   : return(DBFLD::D_SHORT);
++    case aitEnumEnum16  : return(DBFLD::D_USHORT);
++    case aitEnumUint16  : return(DBFLD::D_USHORT);
++    case aitEnumInt32   : return(DBFLD::D_LONG);
++    case aitEnumUint32  : return(DBFLD::D_ULONG);
++    case aitEnumFloat32 : return(DBFLD::D_FLOAT);
++    case aitEnumFloat64 : return(DBFLD::D_DOUBLE);
+     case aitEnumFixedString:
+     case aitEnumString:
+     default:
+-      return(OUR_DBR_STRING);
++      return(DBFLD::D_STRING);
+   }
+ }
+ 
+-static int gddToVALUE(const gdd *gddVal, short ourdbrtype, VALUE *valueStruct)
++static int gddToVALUE(const gdd *gddVal, short dbfld_dbrtype, VALUE *valueStruct)
+ {
+   memset(valueStruct,0,sizeof(VALUE));
+-  switch (ourdbrtype) {
+-    case OUR_DBR_CHAR: {
++  if (dbfld_dbrtype == DBFLD::D_CHAR) {
+           aitInt8 x;
+           gddVal->get(x);
+           valueStruct->v_int8 = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_UCHAR: {
++   } else if (dbfld_dbrtype == DBFLD::D_UCHAR) {
+           aitUint8 x;
+           gddVal->get(x);
+           valueStruct->v_uint8 = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_SHORT: {
++   } else if (dbfld_dbrtype == DBFLD::D_SHORT) {
+           aitInt16 x;
+           gddVal->get(x);
+           valueStruct->v_int16 = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_USHORT: {
++   } else if (dbfld_dbrtype == DBFLD::D_USHORT) {
+           aitUint16 x;
+           gddVal->get(x);
+           valueStruct->v_uint16 = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_LONG: {
++   } else if (dbfld_dbrtype == DBFLD::D_LONG) {
+           aitInt32 x;
+           gddVal->get(x);
+           valueStruct->v_int32 = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_ULONG: {
++   } else if (dbfld_dbrtype == DBFLD::D_ULONG) {
+           aitUint32 x;
+           gddVal->get(x);
+           valueStruct->v_uint32 = x;
+-        }
+-        return(0);
+-
+-#ifdef DBR_INT64
+-    case OUR_DBR_INT64: {
+-          aitInt64 x;
+-          gddVal->get(x);
+-          valueStruct->v_int64 = x;
+-        }
+-        return(0);
+-#endif
+-
+-#ifdef DBR_UINT64
+-    case OUR_DBR_UINT64: {
+-          aitUint64 x;
+-          gddVal->get(x);
+-          valueStruct->v_uint64 = x;
+-        }
+-        return(0);
+-#endif
+-
+-    case OUR_DBR_FLOAT: {
++   } else if (dbfld_dbrtype == DBFLD::D_FLOAT) {
+           aitFloat32 x;
+           gddVal->get(x);
+           valueStruct->v_float = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_DOUBLE: {
++   } else if (dbfld_dbrtype == DBFLD::D_DOUBLE) {
+           aitFloat64 x;
+           gddVal->get(x);
+           valueStruct->v_double = x;
+-        }
+-        return(0);
+-
+-    case OUR_DBR_STRING:
+-    default: {
++   } else { // DBFLD::D_STRING and unknown
+           aitString x;
+           gddVal->get(x);
+-          int len = strlen(x);
+-          int siz = sizeof(valueStruct->v_string);
++          size_t len = strlen(x);
++          size_t siz = sizeof(valueStruct->v_string);
+           if (len >= siz) {
+             strncpy(valueStruct->v_string,x,siz-1);
+             valueStruct->v_string[siz-1] = 0;
+           } else {
+             strcpy(valueStruct->v_string,x);
+           }
+-          return(0);
+-        }
+-  }
++   }
++   return(0);
++}
++
++/*
++ * VALUE_to_string(): convert VALUE to string
++ */
++static int VALUE_to_string(char *pbuf, size_t buflen, const VALUE *pval, short dbfld_dbrtype, bool prefix_with_type = false)
++{
++	if (dbfld_dbrtype == DBFLD::D_CHAR) {
++       /* CHAR and UCHAR are typically used as SHORTSHORT,
++	    * so avoid mounting NULL-bytes into the string
++	    */
++        return epicsSnprintf(pbuf, buflen, "%s%d", (prefix_with_type ? "v_int8 " : ""), (int)pval->v_int8);
++	} else if (dbfld_dbrtype == DBFLD::D_UCHAR) {
++        return epicsSnprintf(pbuf, buflen, "%s%d", (prefix_with_type ? "v_uint8 " : ""), (int)pval->v_uint8);
++	} else if (dbfld_dbrtype == DBFLD::D_SHORT) {
++        return epicsSnprintf(pbuf, buflen, "%s%hd", (prefix_with_type ? "v_int16 " : ""), pval->v_int16);
++	} else if (dbfld_dbrtype == DBFLD::D_USHORT || dbfld_dbrtype == DBFLD::D_ENUM) {
++        return epicsSnprintf(pbuf, buflen, "%s%hu", (prefix_with_type ? "v_uint16 " : ""), pval->v_uint16);
++	} else if (dbfld_dbrtype == DBFLD::D_LONG) {
++        return epicsSnprintf(pbuf, buflen, "%s%ld", (prefix_with_type ? "v_int32 " : ""), (long)pval->v_int32);
++	} else if (dbfld_dbrtype == DBFLD::D_ULONG) {
++        return epicsSnprintf(pbuf, buflen, "%s%lu", (prefix_with_type ? "v_uint32 " : ""), (unsigned long)pval->v_uint32);
++	} else if (dbfld_dbrtype == DBFLD::D_FLOAT) {
++        return epicsSnprintf(pbuf, buflen, "%s%g", (prefix_with_type ? "v_float " : ""), pval->v_float);
++	} else if (dbfld_dbrtype == DBFLD::D_DOUBLE) {
++        return epicsSnprintf(pbuf, buflen, "%s%g", (prefix_with_type ? "v_double " : ""), pval->v_double);
++	} else if (dbfld_dbrtype == DBFLD::D_STRING) {
++        return epicsSnprintf(pbuf, buflen, "%s%s", (prefix_with_type ? "v_string " : ""), pval->v_string);
++	} else {
++		char type[32];
++		epicsSnprintf(type, sizeof(type), "unknown type %d ", dbfld_dbrtype);
++        return epicsSnprintf(pbuf, buflen, "%s%s", (prefix_with_type ? type : ""), pval->v_string);
++    }
+ }
+ 
+ #if 0
+-static char *debugVALUEString(VALUE *v, int ourdbrtype, char *buffer)
++static char *debugVALUEString(const VALUE *v, int dbfld_dbrtype, char *buffer, size_t buflen)
+ {
+-  switch (ourdbrtype) {
+-    case OUR_DBR_CHAR:
+-      sprintf(buffer,"v_int8 %d",v->v_int8);
+-      break;
+-    case OUR_DBR_UCHAR:
+-      sprintf(buffer,"v_uint8 %d",v->v_uint8);
+-      break;
+-    case OUR_DBR_SHORT:
+-      sprintf(buffer,"v_int16 %hd",v->v_int16);
+-      break;
+-    case OUR_DBR_USHORT:
+-      sprintf(buffer,"v_uint16 %hu",v->v_uint16);
+-      break;
+-    case OUR_DBR_LONG:
+-      sprintf(buffer,"v_int32 %d",v->v_int32);
+-      break;
+-    case OUR_DBR_ULONG:
+-      sprintf(buffer,"v_uint32 %u",v->v_uint32);
+-      break;
+-    case OUR_DBR_FLOAT:
+-      sprintf(buffer,"v_float %g",v->v_float);
+-      break;
+-    case OUR_DBR_DOUBLE:
+-      sprintf(buffer,"v_double %g",v->v_double);
+-      break;
+-    case OUR_DBR_STRING:
+-      sprintf(buffer,"v_string '%s'",v->v_string);
+-      break;
+-    default:
+-      sprintf(buffer,"unknown type %d",ourdbrtype);
+-  }
+-  return(buffer);
++	VALUE_to_string(buffer, buflen, v, dbfld_dbrtype, true);
++	return buffer;
+ }
+ #endif
+ 
+diff --git a/src/gateVersion.h b/src/gateVersion.h
+index 01fa3e5..ba0284b 100644
+--- a/src/gateVersion.h
++++ b/src/gateVersion.h
+@@ -30,9 +30,10 @@
+ #define GATEWAY_DEV_SNAPSHOT  ""
+ 
+ #define stringOf(TOKEN) #TOKEN
++#define xstringOf(TOKEN) stringOf(TOKEN)
+ #define GATEWAY_VERSION_STRING "PV Gateway Version " \
+-    stringOf(GATEWAY_VERSION) "." stringOf(GATEWAY_REVISION) "." \
+-    stringOf(GATEWAY_MODIFICATION) GATEWAY_DEV_SNAPSHOT
++    xstringOf(GATEWAY_VERSION) "." xstringOf(GATEWAY_REVISION) "." \
++    xstringOf(GATEWAY_MODIFICATION) GATEWAY_DEV_SNAPSHOT
+ 
+ #define GATEWAY_CREDITS_STRING  \
+           "Originally developed at Argonne National Laboratory and BESSY\n\n" \

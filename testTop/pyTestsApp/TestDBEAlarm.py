@@ -31,7 +31,7 @@ class TestDBEAlarm(unittest.TestCase):
     def onChange(self, pvname=None, **kws):
         self.eventsReceived += 1
         if gwtests.verbose:
-            print pvname, " changed to ", kws['value'], kws['severity']
+            print(pvname, " changed to ", kws['value'], kws['severity'])
         if self.lastSeverity == kws['severity']:
             self.severityUnchanged += 1
         self.lastSeverity = kws['severity']
@@ -46,7 +46,7 @@ class TestDBEAlarm(unittest.TestCase):
         gw.get()
         for val in [0,1,2,3,4,5,6,7,8,9,10,9,8,7,6,5,4,3,2,1,0]:
             ioc.put(val, wait=True)
-        time.sleep(.05)
+        time.sleep(.1)
         # We get 6 events: at connection (INVALID), at first write (NO_ALARM),
         # and at the level crossings MINOR-MAJOR-MINOR-NO_ALARM.
         self.assertTrue(self.eventsReceived == 6, 'events expected: 6; events received: ' + str(self.eventsReceived))

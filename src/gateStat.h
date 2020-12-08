@@ -6,7 +6,7 @@
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
-* in the file LICENSE that is included with this distribution. 
+* in the file LICENSE that is included with this distribution.
 \*************************************************************************/
 // Author: Jim Kowalkowski
 // Date: 7/96
@@ -40,7 +40,7 @@ public:
 	gateStatChan(const casCtx &ctx, casPV *pvIn, gateAsEntry *asentryIn,
 	  const char * const user, const char * const host);
 	~gateStatChan(void);
-	
+
 	virtual caStatus write(const casCtx &ctx, const gdd &value);
 	virtual bool readAccess(void) const;
 	virtual bool writeAccess(void) const;
@@ -51,7 +51,7 @@ class gateStat : public casPV
 public:
 	gateStat(gateServer *s, gateAsEntry *e, const char *n, int t);
 	virtual ~gateStat(void);
-	
+
 	// CA server interface functions
 	virtual caStatus interestRegister(void);
 	virtual void interestDelete(void);
@@ -62,7 +62,7 @@ public:
 	virtual const char *getName() const;
 	virtual casChannel *createChannel (const casCtx &ctx,
 		const char* const pUserName, const char* const pHostName);
-	
+
 	caStatus write(const casCtx &ctx, const gdd &dd, gateChan &chan);
 
     gateAsEntry* getEntry(void) const { return asentry; }
@@ -71,11 +71,11 @@ public:
 	void addChan(gateStatChan *chan) { chan_list.add(*chan); }
 	void removeChan(gateStatChan *chan) {
 		chan_list.remove(*chan); chan->setCasPv(NULL); }
-	
+
 	void postData(long val);
 	void postData(unsigned long val);
 	void postData(double val);
-	
+
 	void report(FILE *fp);
 
     gdd* pvData(void) const { return value; }
@@ -101,7 +101,7 @@ class gateStatDesc : public gateStat
 public:
 	gateStatDesc(gateServer *s, gateAsEntry *e, const char *n, int t);
 	virtual ~gateStatDesc(void);
-	
+
 	// CA server interface functions
 	virtual aitEnum bestExternalType(void) const { return aitEnumString; }
 	virtual caStatus read(const casCtx &ctx, gdd &prototype);
@@ -116,7 +116,7 @@ public:
 	void postData(long val) {};
 	void postData(unsigned long val) {};
 	void postData(double val) {};
-	
+
 private:
 };
 

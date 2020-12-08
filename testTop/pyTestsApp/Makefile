@@ -5,17 +5,27 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-TESTSCRIPTS_HOST += gwtests.py TestDBEValue.py TestDBEAlarm.py TestDBELog.py TestDBEProp.py
-TESTSCRIPTS_HOST += TestPropertyCache.py
-TESTSCRIPTS_HOST += TestEnumPropCache.py
-TESTSCRIPTS_HOST += TestStructures.py
-TESTSCRIPTS_HOST += IOCControl.py GatewayControl.py
+# Test programs
+PYTESTS += TestDBEAlarm.py
+PYTESTS += TestDBELog.py
+PYTESTS += TestDBEProp.py
+PYTESTS += TestDBEValue.py
+PYTESTS += TestEnumPropertyCache.py
+PYTESTS += TestPropertyCache.py
+PYTESTS += TestStructures.py
+PYTESTS += TestWaveformWithCAMaxArrayBytes.py
+
+TAPFILES = $(PYTESTS:.py=.tap)
 
 TESTFILES += test.db
 TESTFILES += access.txt
-#TESTFILES += pvlist.txt   # Done in an explicit recipe line below
 
-CLEANS += *.pyc $(TESTFILES) pvlist.txt gateway.*
+# Which pvlist.txt file depends on USE_PCRE
+USE_PCRE ?= NO
+PVLIST_YES = pvlist_pcre.txt
+PVLIST_NO = pvlist_bre.txt
+
+CLEANS += *.pyc $(TESTFILES) pvlist.txt gateway.* *.tap
 
 include $(TOP)/configure/RULES
 #----------------------------------------
@@ -23,32 +33,29 @@ include $(TOP)/configure/RULES
 
 ifeq ($(T_A),$(EPICS_HOST_ARCH))
 
+# Environment required by some test programs
+export BASE ?= $(EPICS_VERSION).$(EPICS_REVISION)
+export EPICS_BASE
+
 ifeq ($(BASE_3_14),YES)
 clean::
 	@$(RM) $(CLEANS)
 endif
 
 runtests:
-	nosetests
+	nosetests $(PYTESTS:%=../%)
 
-tapfiles:
-	nosetests --with-tap
-
-%.py: ../%.py
-	$(ECHO) "Copying test script $@"
-	@$(INSTALL) -m $(INSTALL_PERMISSIONS) $< .
+$(TAPFILES): Test%.tap: ../Test%.py
+	nosetests --with-tap $<
 
 # Workaround for 3.14 make rules: special target to avoid circular dependencies
-build runtests: testfiles
+build runtests tapfiles: testfiles pvlist.txt
 testfiles: $(TESTFILES:%=../%)
 	$(ECHO) "Copying test files $(TESTFILES)"
 	@$(CP) $^ .
-ifeq ($(USE_PCRE),YES)
-	$(ECHO) "Using pvlist.txt for PCRE"
-	@$(CP) ../pvlist_pcre.txt pvlist.txt
-else
-	$(ECHO) "Using pvlist.txt for BRE"
-	@$(CP) ../pvlist_bre.txt  pvlist.txt
-endif
+
+pvlist.txt: ../$(PVLIST_$(USE_PCRE))
+	$(ECHO) "Copying $< to $@ (USE_PCRE: $(USE_PCRE))"
+	@$(CP) $< $@
 
 endif
